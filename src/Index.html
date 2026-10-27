@@ -135,12 +135,12 @@ h2{font-size:15px;margin:22px 0 10px}
 .sw{width:10px;height:10px;border-radius:3px;display:inline-block}
 .sw.line{height:3px;width:16px;border-radius:2px}
 .sw.dash{height:0;width:16px;border-top:2px dashed #8a8f9c;border-radius:0}
-.hbar{display:grid;grid-template-columns:minmax(110px,180px) 1fr 54px;gap:10px;align-items:center;font-size:13px;padding:5px 0}
+.hbar{display:grid;grid-template-columns:minmax(100px,170px) 1fr 66px;gap:10px;align-items:center;font-size:13px;padding:5px 0}
 .hbar .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hbar .tr{height:10px;background:#EEF1F6;border-radius:4px;display:flex;gap:2px;overflow:hidden}
 .hbar .tr i{display:block;height:100%;border-radius:4px}
 .hbar .v{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
-.hbar .flag{color:#d03b3b;font-size:11px;font-weight:600;margin-left:6px}
+.hbar .flag{color:#d03b3b;font-size:11px;font-weight:600;margin-right:6px}
 .hbar[data-tip]:hover .tr{outline:2px solid #c9d4ec;outline-offset:2px}
 .stack{display:flex;gap:2px;height:16px;border-radius:5px;overflow:hidden}
 .stack i{display:block;height:100%}
@@ -154,6 +154,20 @@ h2{font-size:15px;margin:22px 0 10px}
 .mini .t small{display:block;color:var(--muted);font-size:12px}
 .tag{font-size:11px;font-weight:600;border-radius:99px;padding:2px 8px;white-space:nowrap;align-self:flex-start}
 .tag.crit{background:#FDE5E5;color:#b42d2d}.tag.blk{background:#FFF1D6;color:#8a5a00}
+.chd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.chd .sub{margin-bottom:0}
+.kpi .big small{font-size:16px;color:var(--muted);font-weight:500}
+.hero .big{font-size:40px;margin:4px 0 0}
+.hleg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:10px;font-size:11px;opacity:.9}
+.hleg span{display:inline-flex;align-items:center;gap:5px}.hleg i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.seg{display:flex;background:#EEF1F6;border-radius:9px;padding:3px;margin-bottom:6px}
+.seg button{flex:1;border:0;background:none;padding:7px 6px;border-radius:7px;font-weight:600;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.seg b{font-weight:700;margin-left:4px;color:var(--text)}
+.mini .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .t small{overflow:hidden;text-overflow:ellipsis}
+.more{display:block;text-align:center;font-size:13px;font-weight:600;color:var(--info);padding:10px 0 2px;cursor:pointer}
+.hbar{padding:4px 0}
 #tip{position:fixed;pointer-events:none;background:#18213A;color:#fff;font-size:12px;padding:8px 10px;border-radius:8px;z-index:50;max-width:260px;line-height:1.45;box-shadow:0 6px 18px rgba(0,0,0,.25)}
 @media(max-width:900px){.c3{grid-column:span 6}.c4,.c5,.c6,.c7,.c8{grid-column:span 12}}
 @media(max-width:560px){.c3{grid-column:span 6}.hero .big{font-size:36px}.kpi .big{font-size:26px}.hbar{grid-template-columns:96px 1fr 44px}}
@@ -525,70 +539,57 @@ function renderDashboard() {
   if (!D.user.lead) { $('#view-dashboard').innerHTML = '<div class="empty">Dashboard chỉ dành cho thành viên chủ chốt.</div>'; return; }
   const done = T.filter(isDone), late = T.filter(isLate), soon = T.filter(isSoon), blocked = T.filter(t => t.status === 'Bị vướng');
   const unassigned = T.filter(t => !isDone(t) && !t.owner);
-  const pct = avg(T), left = daysTo(D.eventDate);
+  const pct = avg(T), left = daysTo(D.eventDate), total = T.length || 1;
   const doneWeek = done.filter(t => t.doneAt && daysTo(t.doneAt) > -7).length;
   let h = '<div class="dash">';
 
-  // hero + KPI
-  h += '<div class="card hero c3"><div class="lbl">Tiến độ chung toàn BTC</div><div class="big">' + pct + '%</div>' +
-       '<div class="lbl">' + (left > 0 ? 'Còn <b>' + left + ' ngày</b> đến ngày thi' : left === 0 ? '<b>Hôm nay là ngày thi</b>' : 'Đã qua ngày thi') + '</div>' +
-       '<div class="bar big"><i style="width:' + pct + '%"></i></div></div>';
-  h += kpi('', '✓', 'Đã hoàn thành', done.length + '<span style="font-size:16px;color:var(--muted);font-weight:500"> / ' + T.length + '</span>', '+' + doneWeek + ' việc trong 7 ngày qua', 'Hoàn thành');
-  h += kpi(late.length ? 'crit' : '', '⚠', 'Quá hạn', late.length, unassigned.length + ' việc chưa giao người', '__late');
-  h += kpi(soon.length ? 'warn' : '', '⏰', 'Đến hạn ≤ 3 ngày', soon.length, blocked.length + ' việc đang bị vướng', '__soon');
+  // Hàng 1: tiến độ chung (kèm cơ cấu trạng thái) + 3 chỉ số
+  h += '<div class="card hero c3"><div class="lbl">Tiến độ chung toàn BTC</div>' +
+       '<div class="big">' + pct + '%</div><div class="stack" style="height:10px;margin-top:10px">' +
+       D.statuses.map(st => { const n = T.filter(t => t.status === st).length; return n ? '<i style="flex:' + n + ';background:' + (st === 'Chưa bắt đầu' ? 'rgba(255,255,255,.28)' : STC[st]) + '" data-tip="<b>' + st + '</b><br>' + n + ' việc · ' + Math.round(n * 100 / total) + '%"></i>' : ''; }).join('') +
+       '</div><div class="hleg">' + D.statuses.map(st => '<span><i style="background:' + (st === 'Chưa bắt đầu' ? 'rgba(255,255,255,.45)' : STC[st]) + '"></i>' + T.filter(t => t.status === st).length + ' ' + st.toLowerCase() + '</span>').join('') + '</div></div>';
+  h += kpi('', '✓', 'Đã hoàn thành', done.length + '<small> / ' + T.length + '</small>', '+' + doneWeek + ' trong 7 ngày qua', 'Hoàn thành');
+  h += kpi(late.length ? 'crit' : '', '⚠', 'Quá hạn', late.length, unassigned.length ? unassigned.length + ' việc chưa giao người' : 'Mọi việc đã có người', '__late');
+  h += kpi(soon.length ? 'warn' : '', '⏰', 'Đến hạn ≤ 3 ngày', soon.length, blocked.length ? blocked.length + ' việc đang bị vướng' : 'Không có việc bị vướng', '__soon');
 
-  // plan vs actual
-  h += '<div class="card c8"><h4>Kế hoạch so với thực tế</h4><div class="sub">Số việc cộng dồn: đến hạn theo kế hoạch và đã hoàn thành</div>' +
-       '<div class="svgwrap" id="burn"></div><div class="legend"><span><i class="sw line" style="background:' + C.blue + '"></i>Thực tế (đã hoàn thành)</span>' +
-       '<span><i class="sw dash"></i>Kế hoạch (theo hạn chót)</span><span><i class="sw" style="background:rgba(242,107,58,.18)"></i>Ngày thi</span></div></div>';
+  // Hàng 2: biểu đồ + việc cần chú ý
+  h += '<div class="card c8"><div class="chd"><div><h4>Kế hoạch so với thực tế</h4><div class="sub">Số việc cộng dồn đến ngày thi và chung khảo</div></div>' +
+       '<div class="legend" style="margin:0"><span><i class="sw line" style="background:' + C.blue + '"></i>Đã xong</span><span><i class="sw dash"></i>Kế hoạch</span></div></div>' +
+       '<div class="svgwrap" id="burn"></div></div>';
+  const hot = late.concat(blocked.filter(t => !isLate(t))).sort(byDue);
+  const up = T.filter(t => !isDone(t) && t.due && daysTo(t.due) >= 0 && daysTo(t.due) <= 7).sort(byDue);
+  const tab = S.dashTab || (hot.length ? 'hot' : 'up');
+  const L = (tab === 'hot' ? hot : up);
+  h += '<div class="card c4"><div class="seg"><button data-dt="hot" class="' + (tab === 'hot' ? 'on' : '') + '">Điểm nóng <b>' + hot.length + '</b></button>' +
+       '<button data-dt="up" class="' + (tab === 'up' ? 'on' : '') + '">7 ngày tới <b>' + up.length + '</b></button></div>' +
+       (L.length ? '<ul class="mini">' + L.slice(0, 6).map(t => '<li data-id="' + esc(t.id) + '"><span class="d">' + (t.due ? dmy(t.due) : '—') + '</span><span class="t">' + esc(t.title) +
+         '<small>' + esc(t.ban.replace(/^Ban /, '')) + ' · ' + (t.owner ? esc(ownersOf(t)[0]) + (ownersOf(t).length > 1 ? ' +' + (ownersOf(t).length - 1) : '') : '<span style="color:#b42d2d">chưa giao</span>') + '</small></span>' +
+         (isLate(t) ? '<span class="tag crit">⚠ ' + (-daysTo(t.due)) + 'n</span>' : t.status === 'Bị vướng' ? '<span class="tag blk">⛔</span>' : '<span class="tag" style="background:#E9EDF5">' + t.progress + '%</span>') + '</li>').join('') + '</ul>' +
+         (L.length > 6 ? '<a class="more" data-more="' + tab + '">Xem tất cả ' + L.length + ' việc →</a>' : '')
+       : '<div class="empty" style="padding:28px 10px">' + (tab === 'hot' ? 'Không có điểm nóng 🎉' : 'Không có việc đến hạn trong 7 ngày tới') + '</div>') + '</div>';
 
-  // status
-  const total = T.length || 1;
-  h += '<div class="card c4"><h4>Trạng thái công việc</h4><div class="sub">' + T.length + ' việc</div><div class="stack">' +
-       D.statuses.map(st => { const n = T.filter(t => t.status === st).length; return n ? '<i style="flex:' + n + ';background:' + STC[st] + '" data-tip="<b>' + st + '</b><br>' + n + ' việc · ' + Math.round(n * 100 / total) + '%"></i>' : ''; }).join('') +
-       '</div><div style="margin-top:14px">' +
-       D.statuses.map(st => { const n = T.filter(t => t.status === st).length;
-         return '<div class="hbar" style="grid-template-columns:1fr auto"><span><i class="sw" style="background:' + STC[st] + ';margin-right:8px"></i>' + st + '</span><span class="v">' + n + '</span></div>'; }).join('') +
-       '</div></div>';
-
-  // by ban
-  h += '<div class="card c7"><h4>Tiến độ theo ban</h4><div class="sub">% tiến độ trung bình các việc của ban · bấm để xem chi tiết</div>';
+  // Hàng 3: theo ban + theo người
+  h += '<div class="card c7"><h4>Tiến độ theo ban</h4><div class="sub">Bấm vào ban để xem chi tiết</div>';
   D.bans.forEach(b => {
     const ts = T.filter(t => t.ban === b); if (!ts.length) return;
     const p = avg(ts), l = ts.filter(isLate).length, bl = ts.filter(t => t.status === 'Bị vướng').length;
     h += '<div class="hbar" style="cursor:pointer" data-ban="' + esc(b) + '" data-tip="<b>' + esc(b) + '</b><br>' + ts.filter(isDone).length + '/' + ts.length + ' việc xong · ' + p + '%' + (l ? '<br>⚠ ' + l + ' quá hạn' : '') + (bl ? '<br>⛔ ' + bl + ' bị vướng' : '') + '">' +
-         '<span class="nm">' + esc(b) + '</span><span class="tr"><i style="width:' + p + '%;background:' + C.blue + '"></i></span>' +
-         '<span class="v">' + p + '%' + (l ? '<span class="flag">⚠' + l + '</span>' : '') + '</span></div>';
+         '<span class="nm">' + esc(b.replace(/^Ban /, '')) + '</span><span class="tr"><i style="width:' + p + '%;background:' + C.blue + '"></i></span>' +
+         '<span class="v">' + (l ? '<span class="flag">⚠' + l + '</span>' : '') + p + '%</span></div>';
   });
   h += '</div>';
-
-  // workload
   const load = {};
   T.filter(t => !isDone(t)).forEach(t => ownersOf(t).forEach(o => { load[o] = load[o] || { open: 0, late: 0 }; load[o].open++; if (isLate(t)) load[o].late++; }));
-  const people = Object.keys(load).sort((a, b) => load[b].open - load[a].open).slice(0, 8);
+  const people = Object.keys(load).sort((a, b) => load[b].late - load[a].late || load[b].open - load[a].open).slice(0, 6);
   const maxL = Math.max(1, ...people.map(p => load[p].open));
-  h += '<div class="card c5"><h4>Khối lượng việc theo người</h4><div class="sub">Việc chưa xong đang phụ trách (8 người nhiều nhất)</div>' +
+  h += '<div class="card c5"><div class="chd"><div><h4>Việc đang mở theo người</h4><div class="sub">6 người nhiều việc nhất</div></div>' +
+       '<div class="legend" style="margin:0"><span><i class="sw" style="background:' + C.blue + '"></i>Đang mở</span><span><i class="sw" style="background:' + C.crit + '"></i>Quá hạn</span></div></div>' +
        (people.length ? people.map(p => { const o = load[p];
          return '<div class="hbar" data-tip="<b>' + esc(p) + '</b><br>' + o.open + ' việc chưa xong' + (o.late ? '<br>⚠ ' + o.late + ' quá hạn' : '') + '"><span class="nm">' + esc(p) + '</span>' +
            '<span class="tr" style="background:transparent">' + (o.late ? '<i style="width:' + (o.late * 100 / maxL) + '%;background:' + C.crit + '"></i>' : '') +
            (o.open - o.late ? '<i style="width:' + ((o.open - o.late) * 100 / maxL) + '%;background:' + C.blue + '"></i>' : '') + '</span><span class="v">' + o.open + '</span></div>'; }).join('') +
-         '<div class="legend"><span><i class="sw" style="background:' + C.blue + '"></i>Đang mở</span><span><i class="sw" style="background:' + C.crit + '"></i>Quá hạn</span></div>'
+         (unassigned.length ? '<div class="hbar" style="color:#b42d2d"><span class="nm">Chưa giao người</span><span></span><span class="v">' + unassigned.length + '</span></div>' : '')
        : '<div class="empty" style="padding:20px">Chưa có việc nào được giao người.</div>') + '</div>';
-
-  // hot list
-  const hot = late.concat(blocked.filter(t => !isLate(t))).sort(byDue).slice(0, 8);
-  h += '<div class="card c6"><h4>Điểm nóng</h4><div class="sub">Việc quá hạn hoặc đang bị vướng</div>' +
-       (hot.length ? '<ul class="mini">' + hot.map(t => '<li data-id="' + esc(t.id) + '"><span class="d">' + (t.due ? dmy(t.due) : '—') + '</span><span class="t">' + esc(t.title) +
-         '<small>' + esc(t.ban) + ' · ' + (t.owner ? esc(t.owner) : 'Chưa giao người') + (t.note ? ' · ' + esc(t.note) : '') + '</small></span>' +
-         (isLate(t) ? '<span class="tag crit">⚠ Quá hạn ' + (-daysTo(t.due)) + 'n</span>' : '<span class="tag blk">⛔ Bị vướng</span>') + '</li>').join('') + '</ul>'
-       : '<div class="empty" style="padding:20px">Không có điểm nóng. 🎉</div>') + '</div>';
-
-  // upcoming
-  const up = T.filter(t => !isDone(t) && t.due && daysTo(t.due) >= 0 && daysTo(t.due) <= 7).sort(byDue).slice(0, 10);
-  h += '<div class="card c6"><h4>7 ngày tới</h4><div class="sub">Việc chưa xong có hạn chót từ hôm nay đến ' + dmy(addDays(td, 7)) + '</div>' +
-       (up.length ? '<ul class="mini">' + up.map(t => '<li data-id="' + esc(t.id) + '"><span class="d">' + dmy(t.due) + '</span><span class="t">' + esc(t.title) +
-         '<small>' + esc(t.ban) + ' · ' + (t.owner ? esc(t.owner) : 'Chưa giao người') + '</small></span><span class="tag" style="background:#E9EDF5">' + t.progress + '%</span></li>').join('') + '</ul>'
-       : '<div class="empty" style="padding:20px">Không có việc đến hạn trong 7 ngày tới.</div>') + '</div>';
 
   h += '</div>';
   const v = $('#view-dashboard'); v.innerHTML = h;
@@ -596,6 +597,8 @@ function renderDashboard() {
   v.querySelectorAll('[data-ban]').forEach(el => el.onclick = () => { resetFilters(); $('#fban').value = el.dataset.ban; setTab('tasks'); });
   v.querySelectorAll('.kpi[data-f]').forEach(el => el.onclick = () => { resetFilters(); $('#fstatus').value = el.dataset.f; setTab('tasks'); });
   v.querySelectorAll('.mini li').forEach(el => el.onclick = () => openTask(el.dataset.id));
+  v.querySelectorAll('[data-dt]').forEach(el => el.onclick = () => { S.dashTab = el.dataset.dt; renderDashboard(); });
+  v.querySelectorAll('[data-more]').forEach(el => el.onclick = () => { resetFilters(); if (el.dataset.more === 'up') { $('#fhide').checked = true; } else { $('#fstatus').value = '__late'; } setTab('tasks'); });
 }
 function kpi(cls, icon, label, val, foot, f) {
   return '<div class="card kpi c3 ' + cls + '" data-f="' + f + '" style="cursor:pointer"><div class="lbl"><span aria-hidden="true">' + icon + '</span>' + label + '</div><div class="big">' + val + '</div><div class="foot">' + foot + '</div></div>';
@@ -606,13 +609,14 @@ function drawBurn() {
   const T = S.data.tasks, td = today(), ev = S.data.eventDate;
   const dues = T.filter(t => t.due).map(t => t.due).sort(), dn = T.filter(t => t.doneAt).map(t => t.doneAt).sort();
   if (!dues.length) { el.innerHTML = '<div class="empty">Chưa có việc nào có hạn chót.</div>'; return; }
-  let start = [dues[0], dn[0] || td, td].sort()[0], end = [dues[dues.length - 1], addDays(ev, 1)].sort().pop();
+  let start = [dues[0], dn[0] || td, td].sort()[0], end = [dues.filter(d => d <= addDays(ev, 8)).pop() || dues[0], addDays(ev, 1)].sort().pop();
+  if (dnum(start) < dnum(td) - 14) start = addDays(td, -14);
   const N = dnum(end) - dnum(start) + 1, days = [];
   for (let i = 0; i < N; i++) days.push(addDays(start, i));
   const plan = days.map(d => T.filter(t => t.due && t.due <= d).length);
   const act = days.map(d => d <= td ? T.filter(t => t.doneAt && t.doneAt <= d).length : null);
-  const W = Math.max(320, el.clientWidth || 640), H = 240, L = 34, R = 14, Tp = 12, B = 28;
-  const yStep = Math.max(1, Math.ceil(T.length / 4 / 5) * 5), yMax = yStep * 4;
+  const W = Math.max(320, el.clientWidth || 640), H = 210, L = 34, R = 14, Tp = 12, B = 28;
+  const yStep = Math.max(1, Math.ceil(plan[N - 1] / 4 / 5) * 5), yMax = yStep * 4;
   const x = i => L + (W - L - R) * (N === 1 ? 0.5 : i / (N - 1)), y = v => Tp + (H - Tp - B) * (1 - v / yMax);
   let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Biểu đồ kế hoạch so với thực tế">';
   // event band
