@@ -9,6 +9,7 @@ const CONFIG = {
   subtitle: 'Ngày thi 14–15/11/2026 · THCS Trưng Vương + Zoom',
   eventDate: '2026-11-14',                       // ngày bắt đầu sự kiện (yyyy-mm-dd), dùng để đếm ngược
   timeZone: 'Asia/Ho_Chi_Minh',
+  requireEvidence: true,                         // bắt buộc có minh chứng mới được đánh dấu Hoàn thành (trừ admin)
 
   bans: [
     'Ban Chỉ đạo',

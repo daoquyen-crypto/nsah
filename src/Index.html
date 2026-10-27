@@ -157,12 +157,34 @@ h2{font-size:15px;margin:22px 0 10px}
 #tip{position:fixed;pointer-events:none;background:#18213A;color:#fff;font-size:12px;padding:8px 10px;border-radius:8px;z-index:50;max-width:260px;line-height:1.45;box-shadow:0 6px 18px rgba(0,0,0,.25)}
 @media(max-width:900px){.c3{grid-column:span 6}.c4,.c5,.c6,.c7,.c8{grid-column:span 12}}
 @media(max-width:560px){.c3{grid-column:span 6}.hero .big{font-size:36px}.kpi .big{font-size:26px}.hbar{grid-template-columns:96px 1fr 44px}}
+
+/* minh chứng */
+.ev{border:1px dashed #c9d1e2;border-radius:10px;padding:10px 12px;margin-bottom:14px}
+.ev .hd{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;gap:8px}
+.ev .req{color:#b42d2d;font-weight:500}
+.ev ul{list-style:none;margin:0;padding:0}
+.ev li{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.ev li:last-child{border-bottom:0}
+.ev li .nm{flex:1;min-width:0;cursor:pointer;color:var(--info);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev li small{color:var(--muted);font-size:11px;white-space:nowrap}
+.ev li button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:15px;padding:0 4px}
+.ev .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.ev .btns .btn{padding:7px 12px;font-size:13px}
+.ev .linkrow{display:flex;gap:6px;margin-top:8px}
+.ev .linkrow input{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.ev .empty-ev{font-size:12px;color:var(--muted);padding:4px 0}
+.clip{font-size:11px;color:var(--muted);white-space:nowrap}
+#viewer{position:fixed;inset:0;background:rgba(10,15,30,.88);z-index:45;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+#viewer img{max-width:100%;max-height:82vh;border-radius:8px;background:#fff}
+#viewer .vb{display:flex;gap:10px;margin-top:12px}
+#viewer .vb a,#viewer .vb button{background:#fff;color:var(--text);border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;text-decoration:none;font-size:13px}
 </style>
 </head>
 <body>
 
 <div id="loading" class="loading hidden"></div>
 <div id="tip" class="hidden"></div>
+<div id="viewer" class="hidden"><img id="vImg" alt=""><div class="vb"><a id="vDl" download>Tải về</a><button type="button" id="vClose">Đóng</button></div></div>
 
 <!-- Đăng nhập -->
 <section id="login">
@@ -231,6 +253,16 @@ h2{font-size:15px;margin:22px 0 10px}
           <div class="range"><input type="range" id="t_progress" min="0" max="100" step="10"></div></div>
       </div>
       <div class="field"><label>Ghi chú / vướng mắc / cần hỗ trợ</label><textarea id="t_note"></textarea></div>
+      <div class="ev" id="evBox">
+        <div class="hd"><span>📎 Minh chứng hoàn thành</span><span class="req hidden" id="evReq">Bắt buộc khi Hoàn thành</span></div>
+        <div id="evList"></div>
+        <div class="btns" id="evBtns">
+          <label class="btn ghost" for="evFile">📷 Chụp ảnh / chọn file</label>
+          <button type="button" class="btn ghost" id="evLinkBtn">🔗 Dán link</button>
+        </div>
+        <input type="file" id="evFile" class="hidden" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip">
+        <div class="linkrow hidden" id="evLinkRow"><input id="evUrl" placeholder="https://drive.google.com/…"><button type="button" class="btn" id="evUrlAdd">Thêm</button></div>
+      </div>
       <div class="actions">
         <button type="button" class="btn danger hidden" id="delBtn">Xoá</button>
         <span class="sp"></span>
@@ -401,7 +433,7 @@ function taskRow(t) {
     '<span class="dot ' + c + '" title="' + esc(t.status) + '"></span>' +
     '<div><div class="title">' + esc(t.title) + '</div>' +
     '<div class="meta"><span>' + esc(t.ban) + '</span>' + (t.owner ? '<span>👤 ' + esc(t.owner) + '</span>' : '<span style="color:var(--bad)">Chưa giao người</span>') +
-    '<span class="pill ' + c + '">' + esc(t.status) + '</span>' + (t.canEdit ? '' : '<span class="lock">🔒 chỉ xem</span>') + '</div>' +
+    '<span class="pill ' + c + '">' + esc(t.status) + '</span>' + (t.evidence && t.evidence.length ? '<span class="clip">📎 ' + t.evidence.length + '</span>' : '') + (t.canEdit ? '' : '<span class="lock">🔒 chỉ xem</span>') + '</div>' +
     (t.note && !isDone(t) ? '<div class="note">' + esc(t.note) + '</div>' : '') + '</div>' +
     '<div class="right"><div class="due ' + d.cls + '">' + d.txt + '</div><div class="bar"><i style="width:' + t.progress + '%"></i></div></div></div>';
 }
@@ -427,6 +459,8 @@ function openTask(id) {
   document.querySelectorAll('#taskForm input,#taskForm select,#taskForm textarea').forEach(el => el.disabled = ro);
   $('#saveBtn').classList.toggle('hidden', ro);
   $('#delBtn').classList.toggle('hidden', !(t && u.admin));
+  renderEvidence();
+  $('#evLinkRow').classList.add('hidden'); $('#evUrl').value = '';
   $('#modal').classList.remove('hidden');
   if (!t) setTimeout(() => $('#t_title').focus(), 50);
 }
@@ -454,6 +488,9 @@ $('#taskForm').addEventListener('submit', async e => {
     title: $('#t_title').value, ban: $('#t_ban').value, due: $('#t_due').value, owner: $('#t_owner').value,
     status: $('#t_status').value, progress: +$('#t_progress').value, note: $('#t_note').value
   };
+  if (S.data.requireEvidence && !S.data.user.admin && payload.status === 'Hoàn thành' && t && t.status !== 'Hoàn thành' && !(t.evidence || []).length) {
+    toast('Hãy thêm ít nhất 1 minh chứng (ảnh, file hoặc link) trước khi đánh dấu Hoàn thành.', true); return;
+  }
   $('#saveBtn').disabled = true; busy(true);
   try { S.data = await call('saveTask', S.id, payload); closeModal(); render(); toast('Đã lưu'); }
   catch (err) { toast(err.message, true); }
@@ -618,6 +655,83 @@ document.addEventListener('mousemove', e => {
   tip.style.top = Math.min(e.clientY + 14, innerHeight - r.height - 8) + 'px';
 });
 let rsz; window.addEventListener('resize', () => { clearTimeout(rsz); rsz = setTimeout(() => { if (S.tab === 'dashboard') drawBurn(); }, 200); });
+
+
+/* ── minh chứng ── */
+function renderEvidence() {
+  const t = S.editing, box = $('#evList');
+  const can = t && t.canEdit;
+  $('#evBtns').classList.toggle('hidden', !can);
+  $('#evReq').classList.toggle('hidden', !(S.data.requireEvidence && !S.data.user.admin));
+  if (!t) { box.innerHTML = '<div class="empty-ev">Lưu công việc trước, sau đó mở lại để thêm minh chứng.</div>'; $('#evBtns').classList.add('hidden'); return; }
+  const L = t.evidence || [];
+  box.innerHTML = L.length ? '<ul>' + L.map((e, i) => '<li><span>' + (e.kind === 'link' ? '🔗' : /\.(jpe?g|png|gif|webp|heic)$/i.test(e.name) ? '🖼️' : '📄') + '</span>' +
+      '<span class="nm" data-i="' + i + '" title="' + esc(e.name) + '">' + esc(e.name) + '</span><small>' + esc(e.by) + ' · ' + esc((e.at || '').slice(0, 5)) + '</small>' +
+      (can ? '<button type="button" data-rm="' + i + '" title="Gỡ minh chứng">✕</button>' : '') + '</li>').join('') + '</ul>'
+    : '<div class="empty-ev">Chưa có minh chứng.</div>';
+  box.querySelectorAll('.nm').forEach(el => el.onclick = () => openEvidence(L[+el.dataset.i]));
+  box.querySelectorAll('[data-rm]').forEach(el => el.onclick = async () => {
+    const e = L[+el.dataset.rm]; if (!confirm('Gỡ minh chứng "' + e.name + '"?')) return;
+    await evCall('removeEvidence', t.id, e.ref);
+  });
+}
+async function evCall(fn, id, arg) {
+  busy(true);
+  try {
+    S.data = await call(fn, S.id, id, arg);
+    S.editing = S.data.tasks.find(x => x.id === id) || null;
+    if (S.editing) { $('#mMeta').textContent = 'Cập nhật gần nhất: ' + S.editing.updatedBy + ' · ' + S.editing.updatedAt; }
+    renderEvidence(); render(); toast('Đã cập nhật minh chứng');
+  } catch (err) { toast(err.message, true); }
+  finally { busy(false); }
+}
+$('#evLinkBtn').onclick = () => { $('#evLinkRow').classList.toggle('hidden'); $('#evUrl').focus(); };
+$('#evUrlAdd').onclick = async () => {
+  const url = $('#evUrl').value.trim(); if (!url) return;
+  await evCall('addEvidence', S.editing.id, { kind: 'link', url: url });
+  $('#evUrl').value = ''; $('#evLinkRow').classList.add('hidden');
+};
+$('#evFile').addEventListener('change', async () => {
+  const f = $('#evFile').files[0]; $('#evFile').value = '';
+  if (!f || !S.editing) return;
+  try {
+    const p = await prepFile(f);
+    if (p.size > 10 * 1024 * 1024) { toast('File quá lớn (tối đa 10 MB). Hãy dùng "Dán link" với link Google Drive.', true); return; }
+    await evCall('addEvidence', S.editing.id, { kind: 'file', name: p.name, mime: p.mime, data: p.data });
+  } catch (err) { toast('Không đọc được file: ' + err.message, true); }
+});
+// Ảnh được thu nhỏ (cạnh dài ≤ 1600px) để tải nhanh trên 4G
+function prepFile(f) {
+  const readB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(blob); });
+  if (!/^image\/(jpeg|png|webp)$/.test(f.type) || f.size < 600 * 1024) return readB64(f).then(d => ({ name: f.name, mime: f.type || 'application/octet-stream', data: d, size: f.size }));
+  return new Promise((res, rej) => {
+    const img = new Image(), u = URL.createObjectURL(f);
+    img.onload = () => {
+      const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+      const d = c.toDataURL('image/jpeg', 0.82).split(',')[1];
+      res({ name: f.name.replace(/\.\w+$/, '') + '.jpg', mime: 'image/jpeg', data: d, size: d.length * 0.75 });
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); readB64(f).then(d => res({ name: f.name, mime: f.type, data: d, size: f.size }), rej); };
+    img.src = u;
+  });
+}
+async function openEvidence(e) {
+  if (e.kind === 'link') { window.open(e.ref, '_blank', 'noopener'); return; }
+  busy(true);
+  try {
+    const r = await call('getEvidenceFile', S.id, e.ref);
+    const bin = atob(r.data), arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([arr], { type: r.mime }));
+    $('#vDl').href = url; $('#vDl').download = r.name;
+    if (/^image\//.test(r.mime)) { $('#vImg').src = url; $('#vImg').classList.remove('hidden'); $('#viewer').classList.remove('hidden'); }
+    else { $('#vDl').click(); }
+  } catch (err) { toast(err.message, true); }
+  finally { busy(false); }
+}
+$('#vClose').onclick = () => { $('#viewer').classList.add('hidden'); $('#vImg').src = ''; };
 
 /* ── tự làm mới ── */
 setInterval(() => {

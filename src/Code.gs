@@ -10,7 +10,7 @@ const SH = { members: 'ThanhVien', tasks: 'CongViec', log: 'NhatKy' };
 const STATUSES = ['Chưa bắt đầu', 'Đang làm', 'Bị vướng', 'Hoàn thành'];
 
 const H_MEMBERS = ['Mã truy cập', 'Họ tên', 'Ban (nhiều ban cách nhau dấu phẩy)', 'Vai trò (admin / chủ chốt / thành viên)', 'Điện thoại', 'Email'];
-const H_TASKS = ['ID', 'Ban', 'Công việc', 'Phụ trách', 'Hạn chót (yyyy-mm-dd)', 'Trạng thái', 'Tiến độ (%)', 'Ghi chú', 'Cập nhật bởi', 'Cập nhật lúc'];
+const H_TASKS = ['ID', 'Ban', 'Công việc', 'Phụ trách', 'Hạn chót (yyyy-mm-dd)', 'Trạng thái', 'Tiến độ (%)', 'Ghi chú', 'Cập nhật bởi', 'Cập nhật lúc', 'Minh chứng'];
 const H_LOG = ['Thời gian', 'Người cập nhật', 'ID', 'Công việc', 'Thay đổi'];
 
 /* ───────────── Web app ───────────── */
@@ -27,6 +27,7 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('⚙️ App BTC')
     .addItem('1. Khởi tạo dữ liệu (chạy 1 lần)', 'setup')
     .addItem('2. Tạo mã cho thành viên chưa có mã', 'generateCodes')
+    .addItem('3. Cấp quyền lưu minh chứng (chạy 1 lần)', 'setupEvidence')
     .addToUi();
 }
 
@@ -48,7 +49,7 @@ function setup() {
   }
   if (t.getLastRow() < 2) {
     const now = nowStr_();
-    const rows = CONFIG.seedTasks.map((r, i) => [id_(i + 1), r[0], r[1], r[2] || '', r[3], 'Chưa bắt đầu', 0, '', 'Khởi tạo', now]);
+    const rows = CONFIG.seedTasks.map((r, i) => [id_(i + 1), r[0], r[1], r[2] || '', r[3], 'Chưa bắt đầu', 0, '', 'Khởi tạo', now, '']);
     t.getRange(2, 1, rows.length, H_TASKS.length).setValues(rows);
   }
 
@@ -101,6 +102,7 @@ function getData(identifier) {
     bans: CONFIG.bans,
     statuses: STATUSES,
     eventDate: CONFIG.eventDate,
+    requireEvidence: !!CONFIG.requireEvidence,
     serverTime: nowStr_()
   };
 }
@@ -132,9 +134,12 @@ function saveTask(identifier, t) {
       if (t.updatedAt && old.updatedAt && t.updatedAt !== old.updatedAt) {
         throw new Error('Công việc vừa được ' + old.updatedBy + ' cập nhật lúc ' + old.updatedAt + '. Hãy tải lại để xem bản mới rồi sửa tiếp.');
       }
+      if (CONFIG.requireEvidence && !u.admin && rec.status === 'Hoàn thành' && old.status !== 'Hoàn thành' && !old.evidence.length) {
+        throw new Error('Cần thêm ít nhất 1 minh chứng (ảnh, file hoặc link) trước khi đánh dấu Hoàn thành.');
+      }
       const changes = diff_(old, rec);
       if (changes.length) {
-        sh.getRange(old.row, 2, 1, 9).setValues([[rec.ban, rec.title, rec.owner, rec.due, rec.status, rec.progress, rec.note, u.name, now]]);
+        sh.getRange(old.row, 2, 1, 9).setValues([[rec.ban, rec.title, rec.owner, rec.due, rec.status, rec.progress, rec.note, u.name, now, '']]);
         log_(u.name, old.id, rec.title, changes.join('; '));
       }
     } else {
@@ -166,6 +171,101 @@ function deleteTask(identifier, taskId) {
     lock.releaseLock();
   }
   return getData(identifier);
+}
+
+/* ───────────── Minh chứng ───────────── */
+// Mỗi minh chứng là một dòng trong cột "Minh chứng": loại|tên|fileId hoặc url|người thêm|thời gian
+
+const EV_MAX_BYTES = 10 * 1024 * 1024;
+
+function setupEvidence() {
+  const f = evidenceFolder_();
+  try { SpreadsheetApp.getUi().alert('Đã sẵn sàng. Minh chứng sẽ lưu trong thư mục Drive: "' + f.getName() + '".'); } catch (e) {}
+}
+
+function evidenceFolder_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('EVIDENCE_FOLDER_ID');
+  if (id) { try { return DriveApp.getFolderById(id); } catch (e) {} }
+  const ssFile = DriveApp.getFileById(ss_().getId());
+  const parents = ssFile.getParents();
+  const parent = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
+  const f = parent.createFolder('Minh chứng – ' + CONFIG.appTitle);
+  props.setProperty('EVIDENCE_FOLDER_ID', f.getId());
+  return f;
+}
+
+function clean_(s) { return String(s || '').replace(/[|\r\n]+/g, ' ').trim(); }
+
+function parseEvidence_(v) {
+  return String(v || '').split('\n').map(x => x.trim()).filter(String).map(line => {
+    const p = line.split('|');
+    return { kind: p[0] === 'file' ? 'file' : 'link', name: p[1] || '', ref: p[2] || '', by: p[3] || '', at: p[4] || '' };
+  }).filter(e => e.ref);
+}
+
+function writeEvidence_(sh, row, list, who) {
+  if (!String(sh.getRange(1, 11).getValue())) sh.getRange(1, 11).setValue('Minh chứng').setFontWeight('bold').setBackground('#0B1F4B').setFontColor('#ffffff');
+  sh.getRange(row, 11).setValue(list.map(e => [e.kind, clean_(e.name), e.ref, clean_(e.by), e.at].join('|')).join('\n'));
+  sh.getRange(row, 9, 1, 2).setValues([[who, nowStr_()]]);
+}
+
+function addEvidence(identifier, taskId, ev) {
+  const u = auth_(identifier);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const t = readTasks_().find(x => x.id === taskId);
+    if (!t) throw new Error('Không tìm thấy công việc. Hãy tải lại.');
+    if (!canEdit_(u, t)) throw new Error('Bạn không có quyền thêm minh chứng cho việc này.');
+    let item;
+    if (ev && ev.kind === 'link') {
+      const url = String(ev.url || '').trim();
+      if (!/^https?:\/\/\S+$/i.test(url)) throw new Error('Link không hợp lệ (cần bắt đầu bằng http:// hoặc https://).');
+      item = { kind: 'link', name: clean_(ev.name) || url.replace(/^https?:\/\//, '').slice(0, 60), ref: url };
+    } else {
+      const bytes = Utilities.base64Decode(String(ev.data || ''));
+      if (!bytes.length) throw new Error('File rỗng.');
+      if (bytes.length > EV_MAX_BYTES) throw new Error('File quá lớn (tối đa 10 MB). Hãy gửi link Google Drive thay vì tải file.');
+      const name = clean_(ev.name) || 'minh-chung';
+      const file = evidenceFolder_().createFile(Utilities.newBlob(bytes, ev.mime || 'application/octet-stream', t.id + ' - ' + name));
+      item = { kind: 'file', name: name, ref: file.getId() };
+    }
+    item.by = u.name; item.at = nowStr_();
+    const sh = ss_().getSheetByName(SH.tasks);
+    writeEvidence_(sh, t.row, t.evidence.concat([item]), u.name);
+    log_(u.name, t.id, t.title, 'Thêm minh chứng: ' + item.name);
+  } finally {
+    lock.releaseLock();
+  }
+  return getData(identifier);
+}
+
+function removeEvidence(identifier, taskId, ref) {
+  const u = auth_(identifier);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const t = readTasks_().find(x => x.id === taskId);
+    if (!t) throw new Error('Không tìm thấy công việc. Hãy tải lại.');
+    if (!canEdit_(u, t)) throw new Error('Bạn không có quyền sửa minh chứng của việc này.');
+    const ev = t.evidence.find(e => e.ref === ref);
+    if (!ev) throw new Error('Minh chứng không còn tồn tại.');
+    writeEvidence_(ss_().getSheetByName(SH.tasks), t.row, t.evidence.filter(e => e.ref !== ref), u.name);
+    log_(u.name, t.id, t.title, 'Gỡ minh chứng: ' + ev.name);
+  } finally {
+    lock.releaseLock();
+  }
+  return getData(identifier);
+}
+
+// Trả nội dung file minh chứng cho người đã đăng nhập (chỉ file đang gắn với một công việc)
+function getEvidenceFile(identifier, fileId) {
+  auth_(identifier);
+  const ok = readTasks_().some(t => t.evidence.some(e => e.kind === 'file' && e.ref === fileId));
+  if (!ok) throw new Error('Không tìm thấy minh chứng.');
+  const blob = DriveApp.getFileById(fileId).getBlob();
+  return { name: blob.getName(), mime: blob.getContentType(), data: Utilities.base64Encode(blob.getBytes()) };
 }
 
 function getLog(identifier) {
@@ -261,7 +361,8 @@ function readTasks_() {
       progress: Math.max(0, Math.min(100, Number(r[6]) || 0)),
       note: String(r[7]),
       updatedBy: String(r[8]),
-      updatedAt: r[9] instanceof Date ? Utilities.formatDate(r[9], CONFIG.timeZone, 'dd/MM/yyyy HH:mm') : String(r[9])
+      updatedAt: r[9] instanceof Date ? Utilities.formatDate(r[9], CONFIG.timeZone, 'dd/MM/yyyy HH:mm') : String(r[9]),
+      evidence: parseEvidence_(r[10])
     });
   }
   return out;
