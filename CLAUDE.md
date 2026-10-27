@@ -5,7 +5,7 @@
 - Đẩy lên nhánh `main` là GitHub Actions tự `clasp push` và cập nhật bản triển khai (link app giữ nguyên). Không cần và không được yêu cầu người dùng gửi thông tin đăng nhập Google.
 - Apps Script nạp các file theo thứ tự không đảm bảo: không tham chiếu `CONFIG` ở cấp ngoài cùng của `Code.gs`, chỉ dùng bên trong hàm.
 - `Index.html` là HtmlService template (`<?= ?>`); tránh viết chuỗi `<?` trong CSS/JS.
-- Dữ liệu ban đầu trong `Config.gs` chỉ nạp khi chạy `setup()` trên Sheet trống; sửa `seedTasks` không ảnh hưởng dữ liệu đang dùng. Muốn thêm/sửa công việc đang chạy thì làm trên app hoặc Sheet.
+- Muốn THÊM công việc mới cho app đang chạy: thêm dòng vào `seedTasks` trong `Config.gs` (ban phải có trong `bans`) rồi đẩy lên — `syncSeedTasks_()` tự thêm vào Sheet đúng một lần ở lần mở app kế tiếp (người tạo ghi "Kế hoạch"). Sửa/xoá dòng seed KHÔNG sửa/xoá việc đã có trong Sheet; sửa việc đang chạy thì làm trên app hoặc Sheet.
 - Thay đổi cấu trúc cột Sheet phải tương thích ngược với dữ liệu đang có.
 - Trước khi commit: `cat src/Config.gs src/Code.gs > /tmp/a.js && node --check /tmp/a.js`, và kiểm tra cú pháp phần `<script>` của Index.html.
 - Không dùng tên thương hiệu VEX trong nội dung hay thiết kế.

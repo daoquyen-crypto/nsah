@@ -13,6 +13,7 @@ const CONFIG = {
 
   bans: [
     'Ban Chỉ đạo',
+    'Ban Nhân sự (HR)',
     'Ban Chuyên môn',
     'Ban Thí sinh & Đội thi',
     'Ban Hậu cần – Địa điểm',
@@ -36,7 +37,10 @@ const CONFIG = {
   ],
 
   // [Ban, Công việc, Phụ trách, Hạn chót yyyy-mm-dd]
+  // Việc thêm vào đây sau khi app đã chạy sẽ tự được thêm vào Sheet (một lần) ở lần mở app kế tiếp.
   seedTasks: [
+  ['Ban Nhân sự (HR)', 'Head hunt nhân sự BTC: tuyển đủ mỗi ban chuyên trách tối thiểu 2–3 thành viên', '', '2026-10-30'],
+
   ['Ban Chỉ đạo', 'Ký Kế hoạch phối hợp HLE – SEPA', 'Vũ Quang Minh, Đào Thị Hồng Quyên', '2026-10-30'],
   ['Ban Chỉ đạo', 'Ban hành Quyết định thành lập BTC kèm danh sách thành viên các ban', 'Vũ Quang Minh, Đào Thị Hồng Quyên', '2026-10-30'],
   ['Ban Chỉ đạo', 'Chốt bộ nhận diện (thứ tự logo HLE – SEPA – NIC – nhà tài trợ, theo nhận diện Space Apps 2026)', 'Đào Thị Hồng Quyên', '2026-10-30'],

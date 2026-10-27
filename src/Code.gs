@@ -58,6 +58,7 @@ function setup() {
   t.setColumnWidth(3, 380);
   t.setColumnWidth(8, 260);
 
+  markSeeded_(CONFIG.seedTasks.map(seedKey_));
   generateCodes();
   try { SpreadsheetApp.getUi().alert('Đã khởi tạo xong. Mã truy cập của từng người nằm ở cột A sheet "ThanhVien".'); } catch (e) {}
 }
@@ -89,6 +90,7 @@ function login(identifier) {
 
 function getData(identifier) {
   const u = auth_(identifier);
+  syncSeedTasks_();
   fixIds_();
   const done = doneDates_();
   const tasks = readTasks_().map(t => Object.assign(t, {
@@ -171,6 +173,58 @@ function deleteTask(identifier, taskId) {
     lock.releaseLock();
   }
   return getData(identifier);
+}
+
+/* ───────────── Bổ sung việc mới từ Config.gs ───────────── */
+// Mỗi việc trong CONFIG.seedTasks chỉ được thêm vào Sheet MỘT lần.
+// Việc đã thêm rồi bị xoá trên app sẽ không bị thêm lại.
+
+function seedKey_(r) {
+  const d = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, (r[0] + '|' + r[1]).toLowerCase(), Utilities.Charset.UTF_8);
+  return Utilities.base64Encode(d).slice(0, 10);
+}
+
+function markSeeded_(keys) {
+  const props = PropertiesService.getScriptProperties();
+  const set = new Set(JSON.parse(props.getProperty('SEEDED_KEYS') || '[]').concat(keys));
+  props.setProperty('SEEDED_KEYS', JSON.stringify(Array.from(set)));
+  props.setProperty('SEED_SIG', seedSig_());
+}
+
+function seedSig_() {
+  return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, JSON.stringify(CONFIG.seedTasks) + JSON.stringify(CONFIG.bans), Utilities.Charset.UTF_8));
+}
+
+function syncSeedTasks_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('SEED_SIG') === seedSig_()) return; // Config không đổi → bỏ qua
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(15000)) return;
+  try {
+    if (props.getProperty('SEED_SIG') === seedSig_()) return;
+    const sh = ss_().getSheetByName(SH.tasks);
+    const tasks = readTasks_();
+    const have = new Set(tasks.map(t => (t.ban + '|' + t.title).toLowerCase()));
+    let raw = props.getProperty('SEEDED_KEYS');
+    if (!raw) { // lần đầu: coi các việc đang có trong Sheet là đã thêm
+      raw = JSON.stringify(CONFIG.seedTasks.filter(r => have.has((r[0] + '|' + r[1]).toLowerCase())).map(seedKey_));
+    }
+    const seeded = new Set(JSON.parse(raw));
+    const add = CONFIG.seedTasks.filter(r => !seeded.has(seedKey_(r)) && !have.has((r[0] + '|' + r[1]).toLowerCase()));
+    if (add.length) {
+      let max = tasks.reduce((a, x) => Math.max(a, parseInt(String(x.id).replace(/\D/g, ''), 10) || 0), 0);
+      const now = nowStr_(), row = sh.getLastRow() + 1;
+      const rows = add.map(r => [id_(++max), r[0], r[1], r[2] || '', r[3] || '', 'Chưa bắt đầu', 0, '', 'Kế hoạch', now, '']);
+      sh.getRange(row, 5, rows.length, 1).setNumberFormat('@');
+      sh.getRange(row, 1, rows.length, H_TASKS.length).setValues(rows);
+      rows.forEach(r => log_('Kế hoạch', r[0], r[2], 'Tạo mới (bổ sung từ kế hoạch)'));
+    }
+    sh.getRange('B2:B').setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(CONFIG.bans, true).build());
+    props.setProperty('SEEDED_KEYS', JSON.stringify(Array.from(seeded)));
+    markSeeded_(CONFIG.seedTasks.map(seedKey_));
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /* ───────────── Minh chứng ───────────── */
