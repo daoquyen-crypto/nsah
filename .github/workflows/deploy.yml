@@ -1,0 +1,63 @@
+name: Đẩy code lên Apps Script
+
+# Chạy mỗi khi có thay đổi trong thư mục src/ trên nhánh main,
+# hoặc bấm tay ở tab Actions → "Đẩy code lên Apps Script" → Run workflow.
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', '.github/workflows/deploy.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-apps-script
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+      SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
+      DEPLOYMENT_ID: ${{ secrets.DEPLOYMENT_ID }}
+    steps:
+      - name: Kiểm tra Secrets
+        id: check
+        run: |
+          if [ -z "$CLASPRC_JSON" ] || [ -z "$SCRIPT_ID" ]; then
+            echo "::warning::Chưa cài Secrets CLASPRC_JSON và SCRIPT_ID — bỏ qua bước triển khai. Xem README.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Cài clasp
+        if: steps.check.outputs.ready == 'true'
+        run: npm install -g @google/clasp@3
+
+      - name: Nạp thông tin đăng nhập
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+          printf '{"scriptId":"%s","rootDir":"src"}' "$SCRIPT_ID" > .clasp.json
+
+      - name: Đẩy code lên Apps Script
+        if: steps.check.outputs.ready == 'true'
+        run: clasp push --force
+
+      - name: Cập nhật bản triển khai (giữ nguyên link app)
+        if: steps.check.outputs.ready == 'true' && env.DEPLOYMENT_ID != ''
+        run: |
+          MSG=$(git log -1 --pretty=%s | cut -c1-90)
+          clasp create-deployment -i "$DEPLOYMENT_ID" -d "$MSG"
+
+      - name: Dọn thông tin đăng nhập
+        if: always()
+        run: rm -f ~/.clasprc.json .clasp.json

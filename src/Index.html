@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0B1F4B; --navy2:#16306B; --accent:#F26B3A; --bg:#F4F6FB; --card:#fff; --line:#E3E7F0;
+  --text:#18213A; --muted:#6B7590; --ok:#1E9E61; --warn:#E3A008; --bad:#D93B3B; --info:#2F6FED;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+button,input,select,textarea{font:inherit}
+.hidden{display:none!important}
+
+/* login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(circle at 20% 10%,#22408a,#0B1F4B 60%)}
+.login-card{background:#fff;border-radius:16px;padding:28px;max-width:380px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.login-card h1{font-size:20px;margin:0 0 4px}
+.login-card p{color:var(--muted);margin:0 0 20px;font-size:13px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:12px;font-weight:600;color:var(--muted)}
+.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fff;width:100%}
+.field textarea{min-height:80px;resize:vertical}
+.btn{border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer;background:var(--navy);color:#fff}
+.btn.accent{background:var(--accent)}
+.btn.ghost{background:transparent;color:var(--navy);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--bad);border:1px solid #f3c4c4}
+.btn:disabled{opacity:.6;cursor:default}
+.err{color:var(--bad);font-size:13px;min-height:18px;margin-top:8px}
+
+/* header */
+header{background:var(--navy);color:#fff;padding:14px 16px}
+.hwrap{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.htitle{font-weight:700;font-size:16px;flex:1;min-width:200px}
+.htitle small{display:block;font-weight:400;opacity:.75;font-size:12px}
+.chip{background:var(--accent);color:#fff;border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px;white-space:nowrap}
+.user{font-size:13px;opacity:.9;display:flex;align-items:center;gap:8px}
+.user button{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px}
+nav{background:var(--navy2)}
+.nwrap{max-width:1100px;margin:0 auto;display:flex;gap:4px;padding:0 12px;overflow-x:auto}
+nav button{background:none;border:0;color:rgba(255,255,255,.7);padding:12px 14px;cursor:pointer;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
+nav button.on{color:#fff;border-bottom-color:var(--accent)}
+main{max-width:1100px;margin:0 auto;padding:16px}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;cursor:pointer}
+.stat b{display:block;font-size:24px}
+.stat span{color:var(--muted);font-size:12px}
+.stat.bad b{color:var(--bad)} .stat.warn b{color:var(--warn)} .stat.ok b{color:var(--ok)}
+.overall{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:16px}
+.overall .row{display:flex;justify-content:space-between;margin-bottom:8px;font-weight:600}
+.bar{height:8px;background:#E9EDF5;border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:99px}
+.bar.big{height:12px}
+h2{font-size:15px;margin:22px 0 10px}
+
+.bans{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.ban{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:border-color .15s}
+.ban:hover{border-color:var(--navy)}
+.ban .t{font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+.ban .m{font-size:12px;color:var(--muted);margin-top:8px;display:flex;gap:10px;flex-wrap:wrap}
+.ban .m .b{color:var(--bad);font-weight:600}
+
+/* filters + list */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.filters input,.filters select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
+.filters input[type=search]{flex:1;min-width:180px}
+.tog{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none}
+.group{margin-bottom:18px}
+.group h3{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.group h3 .n{background:#E9EDF5;color:var(--text);border-radius:99px;padding:1px 8px;font-size:11px}
+.group.overdue h3{color:var(--bad)}
+.task{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;cursor:pointer}
+.task:hover{border-color:#b9c3d8}
+.task .title{font-weight:600;line-height:1.35}
+.task.done .title{color:var(--muted);text-decoration:line-through}
+.task .meta{font-size:12px;color:var(--muted);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
+.task .note{font-size:12px;color:#8a5a00;background:#FFF7E0;border-radius:6px;padding:4px 8px;margin-top:6px}
+.task .right{text-align:right;min-width:86px}
+.task .right .bar{width:80px;margin-top:6px;margin-left:auto}
+.dot{width:12px;height:12px;border-radius:50%;background:#C9D1E2}
+.dot.s1{background:var(--info)} .dot.s2{background:var(--bad)} .dot.s3{background:var(--ok)}
+.due{font-size:12px;font-weight:600;white-space:nowrap}
+.due.late{color:var(--bad)} .due.soon{color:#B7791F} .due.ok{color:var(--muted)}
+.pill{display:inline-block;font-size:11px;font-weight:600;border-radius:99px;padding:2px 8px;background:#E9EDF5}
+.pill.s1{background:#E3ECFF;color:var(--info)} .pill.s2{background:#FDE5E5;color:var(--bad)} .pill.s3{background:#DFF5EA;color:var(--ok)}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+.lock{font-size:11px;color:var(--muted)}
+
+/* log */
+.log{background:var(--card);border:1px solid var(--line);border-radius:var(--radius)}
+.log div{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px}
+.log div:last-child{border-bottom:0}
+.log small{color:var(--muted)}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(10,20,45,.5);display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto;z-index:20}
+.sheet{background:#fff;border-radius:14px;max-width:560px;width:100%;padding:20px}
+.sheet h3{margin:0 0 14px;font-size:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.range{display:flex;align-items:center;gap:10px}
+.range input{flex:1;padding:0;border:0}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap}
+.actions .sp{flex:1}
+.meta-line{font-size:12px;color:var(--muted);margin:-4px 0 12px}
+.fab{position:fixed;right:18px;bottom:18px;width:54px;height:54px;border-radius:50%;background:var(--accent);color:#fff;border:0;font-size:28px;box-shadow:0 8px 20px rgba(242,107,58,.45);cursor:pointer;z-index:10}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:30;max-width:90vw}
+.toast.bad{background:var(--bad)}
+.loading{position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--accent),transparent);background-size:200% 100%;animation:ld 1s linear infinite;z-index:40}
+@keyframes ld{from{background-position:200% 0}to{background-position:-200% 0}}
+.sync{font-size:12px;color:var(--muted);text-align:right;margin-top:24px}
+@media(max-width:560px){.grid2{grid-template-columns:1fr}.task{grid-template-columns:auto 1fr}.task .right{grid-column:2;text-align:left;display:flex;gap:10px;align-items:center}.task .right .bar{margin:0}}
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading hidden"></div>
+
+<!-- Đăng nhập -->
+<section id="login">
+  <div class="login-card">
+    <h1><?= cfg.title ?></h1>
+    <p>Bảng theo dõi tiến độ của Ban Tổ chức. Đăng nhập bằng mã truy cập, số điện thoại hoặc email đã đăng ký với BTC.</p>
+    <form id="loginForm">
+      <div class="field">
+        <label for="ident">Mã truy cập / SĐT / Email</label>
+        <input id="ident" autocomplete="username" placeholder="VD: K7M2QX hoặc 0912 345 678" required>
+      </div>
+      <button class="btn accent" style="width:100%" id="loginBtn">Vào bảng tiến độ</button>
+      <div class="err" id="loginErr"></div>
+    </form>
+  </div>
+</section>
+
+<!-- App -->
+<section id="app" class="hidden">
+  <header><div class="hwrap">
+    <div class="htitle">Tiến độ <?= cfg.title ?><small><?= cfg.subtitle ?></small></div>
+    <div class="chip" id="countdown"></div>
+    <div class="user"><span id="uname"></span><button id="logout">Đăng xuất</button></div>
+  </div></header>
+  <nav><div class="nwrap">
+    <button data-tab="overview" class="on">Tổng quan</button>
+    <button data-tab="tasks">Công việc</button>
+    <button data-tab="log">Nhật ký cập nhật</button>
+  </div></nav>
+  <main>
+    <div id="view-overview"></div>
+    <div id="view-tasks" class="hidden">
+      <div class="filters">
+        <input type="search" id="fq" placeholder="Tìm công việc, người phụ trách…">
+        <select id="fban"><option value="">Tất cả các ban</option></select>
+        <select id="fstatus"><option value="">Mọi trạng thái</option></select>
+        <label class="tog"><input type="checkbox" id="fmine"> Việc của tôi / ban tôi</label>
+        <label class="tog"><input type="checkbox" id="fhide"> Ẩn việc đã xong</label>
+      </div>
+      <div id="list"></div>
+    </div>
+    <div id="view-log" class="hidden"><div class="log" id="logList"></div></div>
+    <div class="sync" id="sync"></div>
+  </main>
+  <button class="fab" id="addBtn" title="Thêm công việc">+</button>
+</section>
+
+<!-- Modal sửa -->
+<div class="modal hidden" id="modal">
+  <div class="sheet">
+    <h3 id="mTitle">Công việc</h3>
+    <div class="meta-line" id="mMeta"></div>
+    <form id="taskForm">
+      <div class="field"><label>Tên công việc</label><input id="t_title" required></div>
+      <div class="grid2">
+        <div class="field"><label>Ban</label><select id="t_ban"></select></div>
+        <div class="field"><label>Hạn chót</label><input type="date" id="t_due"></div>
+      </div>
+      <div class="field"><label>Người phụ trách</label><input id="t_owner" list="memberList" placeholder="Có thể ghi nhiều người, cách nhau dấu phẩy"></div>
+      <datalist id="memberList"></datalist>
+      <div class="grid2">
+        <div class="field"><label>Trạng thái</label><select id="t_status"></select></div>
+        <div class="field"><label>Tiến độ: <span id="t_pv">0</span>%</label>
+          <div class="range"><input type="range" id="t_progress" min="0" max="100" step="10"></div></div>
+      </div>
+      <div class="field"><label>Ghi chú / vướng mắc / cần hỗ trợ</label><textarea id="t_note"></textarea></div>
+      <div class="actions">
+        <button type="button" class="btn danger hidden" id="delBtn">Xoá</button>
+        <span class="sp"></span>
+        <button type="button" class="btn ghost" id="cancelBtn">Đóng</button>
+        <button class="btn accent" id="saveBtn">Lưu</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const LS_KEY = 'btc_' + <?!= JSON.stringify(cfg.id) ?> + '_id';
+const S = { id: null, data: null, tab: 'overview', editing: null, busy: false };
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const SCLS = { 'Chưa bắt đầu': 's0', 'Đang làm': 's1', 'Bị vướng': 's2', 'Hoàn thành': 's3' };
+
+function call(fn) {
+  const args = Array.prototype.slice.call(arguments, 1);
+  return new Promise((res, rej) => {
+    google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(e && e.message ? e : new Error(String(e))))[fn].apply(null, args);
+  });
+}
+function busy(on) { S.busy = on; $('#loading').classList.toggle('hidden', !on); }
+function toast(msg, bad) {
+  const t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), bad ? 5000 : 2500);
+}
+function lsGet() { try { return localStorage.getItem(LS_KEY); } catch (e) { return null; } }
+function lsSet(v) { try { v ? localStorage.setItem(LS_KEY, v) : localStorage.removeItem(LS_KEY); } catch (e) {} }
+
+/* ── ngày ── */
+function today() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date()); }
+function dnum(s) { const p = s.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 864e5; }
+function daysTo(s) { return s ? dnum(s) - dnum(today()) : null; }
+function dmy(s) { if (!s) return ''; const p = s.split('-'); return p[2] + '/' + p[1]; }
+function dueInfo(t) {
+  if (!t.due) return { cls: 'ok', txt: 'Chưa có hạn' };
+  if (t.status === 'Hoàn thành') return { cls: 'ok', txt: 'Hạn ' + dmy(t.due) };
+  const d = daysTo(t.due);
+  if (d < 0) return { cls: 'late', txt: 'Quá hạn ' + (-d) + ' ngày' };
+  if (d === 0) return { cls: 'soon', txt: 'Hạn hôm nay' };
+  if (d <= 3) return { cls: 'soon', txt: 'Còn ' + d + ' ngày · ' + dmy(t.due) };
+  return { cls: 'ok', txt: 'Hạn ' + dmy(t.due) };
+}
+const isDone = t => t.status === 'Hoàn thành';
+const isLate = t => !isDone(t) && t.due && daysTo(t.due) < 0;
+const isSoon = t => !isDone(t) && t.due && daysTo(t.due) >= 0 && daysTo(t.due) <= 3;
+function isMine(t) {
+  const u = S.data.user;
+  return u.bans.indexOf(t.ban) >= 0 || (t.owner && t.owner.toLowerCase().indexOf(u.name.toLowerCase()) >= 0);
+}
+
+/* ── đăng nhập ── */
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = $('#ident').value.trim(); if (!id) return;
+  $('#loginBtn').disabled = true; $('#loginErr').textContent = '';
+  try { S.id = id; await load(true); lsSet(id); }
+  catch (err) { S.id = null; $('#loginErr').textContent = err.message; }
+  finally { $('#loginBtn').disabled = false; }
+});
+$('#logout').onclick = () => { lsSet(null); S.id = null; S.data = null; $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#ident').value = ''; };
+
+async function load(first) {
+  busy(true);
+  try {
+    S.data = await call('getData', S.id);
+    if (first) initApp();
+    render();
+  } finally { busy(false); }
+}
+
+function initApp() {
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
+  const d = S.data;
+  $('#uname').textContent = d.user.name + (d.user.admin ? ' · Trưởng BTC' : '');
+  $('#fban').innerHTML = '<option value="">Tất cả các ban</option>' + d.bans.map(b => '<option>' + esc(b) + '</option>').join('');
+  $('#fstatus').innerHTML = '<option value="">Mọi trạng thái</option><option value="__late">⚠ Quá hạn</option><option value="__soon">⏰ Đến hạn ≤ 3 ngày</option>' + d.statuses.map(s => '<option>' + esc(s) + '</option>').join('');
+  $('#t_status').innerHTML = d.statuses.map(s => '<option>' + esc(s) + '</option>').join('');
+  $('#memberList').innerHTML = d.members.map(m => '<option value="' + esc(m.name) + '">').join('');
+  const left = daysTo(d.eventDate);
+  $('#countdown').textContent = left > 0 ? 'Còn ' + left + ' ngày đến ngày thi' : left === 0 ? 'Hôm nay là ngày thi!' : 'Đã qua ngày thi';
+}
+
+/* ── tabs ── */
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+function setTab(tab) {
+  S.tab = tab;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  ['overview', 'tasks', 'log'].forEach(v => $('#view-' + v).classList.toggle('hidden', v !== tab));
+  $('#addBtn').classList.toggle('hidden', tab === 'log');
+  if (tab === 'log') loadLog(); else render();
+}
+['#fq', '#fban', '#fstatus', '#fmine', '#fhide'].forEach(s => $(s).addEventListener('input', renderTasks));
+
+function render() {
+  if (!S.data) return;
+  $('#sync').textContent = 'Đồng bộ lúc ' + S.data.serverTime + ' · tự làm mới mỗi 2 phút';
+  if (S.tab === 'overview') renderOverview(); else if (S.tab === 'tasks') renderTasks();
+}
+
+function avg(ts) { return ts.length ? Math.round(ts.reduce((a, t) => a + t.progress, 0) / ts.length) : 0; }
+
+function renderOverview() {
+  const T = S.data.tasks;
+  const late = T.filter(isLate), soon = T.filter(isSoon), blocked = T.filter(t => t.status === 'Bị vướng' && !isLate(t)), done = T.filter(isDone);
+  const pct = avg(T);
+  let h = '<div class="stats">' +
+    stat('', T.length, 'Tổng công việc', '') +
+    stat('ok', done.length, 'Đã hoàn thành', 'Hoàn thành') +
+    stat('bad', late.length, 'Quá hạn', '__late') +
+    stat('warn', soon.length, 'Đến hạn trong 3 ngày', '__soon') +
+    stat('bad', T.filter(t => t.status === 'Bị vướng').length, 'Đang bị vướng', 'Bị vướng') +
+    '</div>';
+  h += '<div class="overall"><div class="row"><span>Tiến độ chung toàn BTC</span><span>' + pct + '%</span></div><div class="bar big"><i style="width:' + pct + '%"></i></div></div>';
+
+  const attn = late.concat(blocked, soon.filter(t => t.status !== 'Bị vướng'));
+  h += '<h2>Cần chú ý ngay (' + attn.length + ')</h2>';
+  h += attn.length ? attn.sort(byDue).map(taskRow).join('') : '<div class="empty">Không có việc quá hạn, vướng mắc hay sắp đến hạn. 🎉</div>';
+
+  h += '<h2>Tiến độ theo ban</h2><div class="bans">';
+  S.data.bans.forEach(b => {
+    const ts = T.filter(t => t.ban === b); if (!ts.length) return;
+    const p = avg(ts), l = ts.filter(isLate).length, bl = ts.filter(t => t.status === 'Bị vướng').length;
+    h += '<div class="ban" data-ban="' + esc(b) + '"><div class="t"><span>' + esc(b) + '</span><span>' + p + '%</span></div>' +
+      '<div class="bar"><i style="width:' + p + '%;background:' + (l ? 'var(--bad)' : 'var(--ok)') + '"></i></div>' +
+      '<div class="m"><span>' + ts.filter(isDone).length + '/' + ts.length + ' việc xong</span>' +
+      (l ? '<span class="b">' + l + ' quá hạn</span>' : '') + (bl ? '<span class="b">' + bl + ' vướng</span>' : '') + '</div></div>';
+  });
+  h += '</div>';
+  $('#view-overview').innerHTML = h;
+  $('#view-overview').querySelectorAll('.ban').forEach(el => el.onclick = () => { resetFilters(); $('#fban').value = el.dataset.ban; setTab('tasks'); });
+  $('#view-overview').querySelectorAll('.stat').forEach(el => el.onclick = () => { resetFilters(); $('#fstatus').value = el.dataset.f; setTab('tasks'); });
+  bindRows('#view-overview');
+}
+function stat(cls, n, label, f) { return '<div class="stat ' + cls + '" data-f="' + f + '"><b>' + n + '</b><span>' + label + '</span></div>'; }
+function resetFilters() { $('#fq').value = ''; $('#fban').value = ''; $('#fstatus').value = ''; $('#fmine').checked = false; $('#fhide').checked = false; }
+
+function byDue(a, b) { return (a.due || '9999') < (b.due || '9999') ? -1 : (a.due || '9999') > (b.due || '9999') ? 1 : a.id < b.id ? -1 : 1; }
+
+function renderTasks() {
+  if (!S.data) return;
+  const q = $('#fq').value.trim().toLowerCase(), fb = $('#fban').value, fs = $('#fstatus').value, mine = $('#fmine').checked, hide = $('#fhide').checked;
+  const list = S.data.tasks.filter(t =>
+    (!q || (t.title + ' ' + t.owner + ' ' + t.note + ' ' + t.id).toLowerCase().indexOf(q) >= 0) &&
+    (!fb || t.ban === fb) &&
+    (!fs || (fs === '__late' ? isLate(t) : fs === '__soon' ? isSoon(t) : t.status === fs)) &&
+    (!mine || isMine(t)) && (!hide || !isDone(t))
+  ).sort(byDue);
+  const groups = [
+    ['overdue', 'Quá hạn', list.filter(isLate)],
+    ['', 'Đến hạn trong 3 ngày', list.filter(isSoon)],
+    ['', 'Sắp tới', list.filter(t => !isDone(t) && t.due && daysTo(t.due) > 3)],
+    ['', 'Chưa có hạn', list.filter(t => !isDone(t) && !t.due)],
+    ['', 'Đã hoàn thành', list.filter(isDone)]
+  ];
+  let h = '';
+  groups.forEach(g => { if (g[2].length) h += '<div class="group ' + g[0] + '"><h3>' + g[1] + ' <span class="n">' + g[2].length + '</span></h3>' + g[2].map(taskRow).join('') + '</div>'; });
+  $('#list').innerHTML = h || '<div class="empty">Không có công việc phù hợp bộ lọc.</div>';
+  bindRows('#list');
+}
+
+function taskRow(t) {
+  const d = dueInfo(t), c = SCLS[t.status] || 's0';
+  return '<div class="task ' + (isDone(t) ? 'done' : '') + '" data-id="' + esc(t.id) + '">' +
+    '<span class="dot ' + c + '" title="' + esc(t.status) + '"></span>' +
+    '<div><div class="title">' + esc(t.title) + '</div>' +
+    '<div class="meta"><span>' + esc(t.ban) + '</span>' + (t.owner ? '<span>👤 ' + esc(t.owner) + '</span>' : '<span style="color:var(--bad)">Chưa giao người</span>') +
+    '<span class="pill ' + c + '">' + esc(t.status) + '</span>' + (t.canEdit ? '' : '<span class="lock">🔒 chỉ xem</span>') + '</div>' +
+    (t.note && !isDone(t) ? '<div class="note">' + esc(t.note) + '</div>' : '') + '</div>' +
+    '<div class="right"><div class="due ' + d.cls + '">' + d.txt + '</div><div class="bar"><i style="width:' + t.progress + '%"></i></div></div></div>';
+}
+function bindRows(root) { $(root).querySelectorAll('.task').forEach(el => el.onclick = () => openTask(el.dataset.id)); }
+
+/* ── modal ── */
+function openTask(id) {
+  const d = S.data, t = id ? d.tasks.find(x => x.id === id) : null;
+  const u = d.user;
+  S.editing = t;
+  const ro = t ? !t.canEdit : false;
+  const banOpts = u.admin ? d.bans : d.bans.filter(b => u.bans.indexOf(b) >= 0 || (t && t.ban === b));
+  $('#t_ban').innerHTML = (banOpts.length ? banOpts : d.bans).map(b => '<option>' + esc(b) + '</option>').join('');
+  $('#mTitle').textContent = t ? t.id + (ro ? ' · Chỉ xem' : ' · Cập nhật công việc') : 'Thêm công việc mới';
+  $('#mMeta').textContent = t && t.updatedAt ? 'Cập nhật gần nhất: ' + t.updatedBy + ' · ' + t.updatedAt : '';
+  $('#t_title').value = t ? t.title : '';
+  $('#t_ban').value = t ? t.ban : ($('#fban').value && banOpts.indexOf($('#fban').value) >= 0 ? $('#fban').value : banOpts[0] || d.bans[0]);
+  $('#t_due').value = t ? t.due : '';
+  $('#t_owner').value = t ? t.owner : '';
+  $('#t_status').value = t ? t.status : 'Chưa bắt đầu';
+  $('#t_progress').value = t ? t.progress : 0; $('#t_pv').textContent = $('#t_progress').value;
+  $('#t_note').value = t ? t.note : '';
+  document.querySelectorAll('#taskForm input,#taskForm select,#taskForm textarea').forEach(el => el.disabled = ro);
+  $('#saveBtn').classList.toggle('hidden', ro);
+  $('#delBtn').classList.toggle('hidden', !(t && u.admin));
+  $('#modal').classList.remove('hidden');
+  if (!t) setTimeout(() => $('#t_title').focus(), 50);
+}
+function closeModal() { $('#modal').classList.add('hidden'); S.editing = null; }
+$('#cancelBtn').onclick = closeModal;
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+$('#addBtn').onclick = () => openTask(null);
+$('#t_progress').addEventListener('input', () => {
+  const v = +$('#t_progress').value; $('#t_pv').textContent = v;
+  if (v === 100) $('#t_status').value = 'Hoàn thành';
+  else if ($('#t_status').value === 'Hoàn thành') $('#t_status').value = 'Đang làm';
+  else if (v > 0 && $('#t_status').value === 'Chưa bắt đầu') $('#t_status').value = 'Đang làm';
+});
+$('#t_status').addEventListener('change', () => {
+  if ($('#t_status').value === 'Hoàn thành') { $('#t_progress').value = 100; $('#t_pv').textContent = 100; }
+  else if (+$('#t_progress').value === 100) { $('#t_progress').value = 90; $('#t_pv').textContent = 90; }
+});
+
+$('#taskForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const t = S.editing;
+  const payload = {
+    id: t ? t.id : '', updatedAt: t ? t.updatedAt : '',
+    title: $('#t_title').value, ban: $('#t_ban').value, due: $('#t_due').value, owner: $('#t_owner').value,
+    status: $('#t_status').value, progress: +$('#t_progress').value, note: $('#t_note').value
+  };
+  $('#saveBtn').disabled = true; busy(true);
+  try { S.data = await call('saveTask', S.id, payload); closeModal(); render(); toast('Đã lưu'); }
+  catch (err) { toast(err.message, true); }
+  finally { $('#saveBtn').disabled = false; busy(false); }
+});
+$('#delBtn').onclick = async () => {
+  const t = S.editing; if (!t || !confirm('Xoá công việc "' + t.title + '"?')) return;
+  busy(true);
+  try { S.data = await call('deleteTask', S.id, t.id); closeModal(); render(); toast('Đã xoá'); }
+  catch (err) { toast(err.message, true); }
+  finally { busy(false); }
+};
+
+/* ── nhật ký ── */
+async function loadLog() {
+  $('#logList').innerHTML = '<div>Đang tải…</div>';
+  try {
+    const L = await call('getLog', S.id);
+    $('#logList').innerHTML = L.length ? L.map(l => '<div><b>' + esc(l.who) + '</b> · ' + esc(l.id) + ' ' + esc(l.title) + '<br>' + esc(l.change) + '<br><small>' + esc(l.time) + '</small></div>').join('') : '<div>Chưa có cập nhật nào.</div>';
+  } catch (err) { $('#logList').innerHTML = '<div>' + esc(err.message) + '</div>'; }
+}
+
+/* ── tự làm mới ── */
+setInterval(() => {
+  if (S.id && S.data && !S.busy && !document.hidden && $('#modal').classList.contains('hidden')) {
+    load(false).catch(() => {});
+  }
+}, 120000);
+
+/* ── khởi động ── */
+(async function () {
+  const saved = lsGet();
+  if (saved) {
+    S.id = saved;
+    try { await load(true); } catch (err) { S.id = null; lsSet(null); $('#loginErr').textContent = err.message; }
+  }
+})();
+</script>
+</body>
+</html>
