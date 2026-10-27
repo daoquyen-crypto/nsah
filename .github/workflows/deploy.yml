@@ -18,7 +18,8 @@ jobs:
     env:
       CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
       SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
-      DEPLOYMENT_ID: ${{ secrets.DEPLOYMENT_ID }}
+      # Bản triển khai web app đang dùng (link gửi BTC). Có Secret DEPLOYMENT_ID thì ưu tiên Secret.
+      DEPLOYMENT_ID: ${{ secrets.DEPLOYMENT_ID || 'AKfycbyFpJ4CqVHuaOGIIKRSOXpB5N7fiBXAQyBzvfwh7I4MhE4GfCgyPSBE_U2YqJW-eEeC' }}
     steps:
       - name: Kiểm tra Secrets
         id: check

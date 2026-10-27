@@ -1,7 +1,7 @@
 /**
  * APP THEO DÕI TIẾN ĐỘ BTC — phần dùng chung cho mọi dự án.
  * Thông tin riêng của từng sự kiện nằm trong Config.gs.
- * Dán file này vào Apps Script gắn với Google Sheet của BTC (Tiện ích mở rộng > Apps Script).
+ * Code được tự đẩy từ GitHub (daoquyen-crypto/nsah) — sửa trên GitHub, không sửa trực tiếp ở đây.
  * Dữ liệu nằm trong 3 sheet: ThanhVien, CongViec, NhatKy.
  */
 

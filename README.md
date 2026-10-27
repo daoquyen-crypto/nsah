@@ -3,7 +3,8 @@
 Ứng dụng web nhỏ (Google Sheet + Apps Script) để Ban Tổ chức sự kiện theo dõi tiến độ công việc.
 Thành viên đăng nhập bằng **mã truy cập / số điện thoại / email**, không cần tài khoản Google.
 
-Dự án đầu tiên: **NASA Space Apps Challenge Hà Nội 2026**.
+Dự án đầu tiên: **NASA Space Apps Challenge Hà Nội 2026** — link app:
+https://script.google.com/macros/s/AKfycbyFpJ4CqVHuaOGIIKRSOXpB5N7fiBXAQyBzvfwh7I4MhE4GfCgyPSBE_U2YqJW-eEeC/exec
 
 ## Cấu trúc
 
@@ -40,7 +41,7 @@ Phân quyền: admin sửa/xoá mọi việc; thành viên sửa việc của ba
 5. Tab **Actions** → "Đẩy code lên Apps Script" → **Run workflow**. Code sẽ được đẩy lên Apps Script.
 6. Trong Apps Script: chọn hàm `setup` → Chạy (cấp quyền). Sau đó Triển khai → Tùy chọn triển khai mới →
    Ứng dụng web (Thực thi: Tôi; Truy cập: Bất kỳ ai). Copy link app.
-7. Triển khai → Quản lý các lần triển khai → copy **Deployment ID**, thêm Secret `DEPLOYMENT_ID`.
+7. Triển khai → Quản lý các lần triển khai → copy **Deployment ID**, ghi vào `DEPLOYMENT_ID` trong `.github/workflows/deploy.yml` (hoặc tạo Secret `DEPLOYMENT_ID`).
    Từ giờ mỗi thay đổi trong `src/` sẽ tự cập nhật app, **link giữ nguyên**.
 
 > Không bao giờ dán nội dung `.clasprc.json` vào chat, email hay file trong kho — chỉ để trong GitHub Secrets.
