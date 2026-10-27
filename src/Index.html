@@ -289,6 +289,7 @@ h2{font-size:15px;margin:22px 0 10px}
 
 <script>
 const LS_KEY = 'btc_' + <?!= JSON.stringify(cfg.id) ?> + '_id';
+const URL_KEY = <?!= JSON.stringify(cfg.k) ?>;
 const S = { id: null, data: null, tab: 'overview', editing: null, busy: false };
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -335,11 +336,11 @@ $('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const id = $('#ident').value.trim(); if (!id) return;
   $('#loginBtn').disabled = true; $('#loginErr').textContent = '';
-  try { S.id = id; await load(true); lsSet(id); }
+  try { S.id = id; await load(true); lsSet(id); try { localStorage.removeItem(LS_KEY + '_out'); } catch (e) {} }
   catch (err) { S.id = null; $('#loginErr').textContent = err.message; }
   finally { $('#loginBtn').disabled = false; }
 });
-$('#logout').onclick = () => { lsSet(null); S.id = null; S.data = null; $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#ident').value = ''; };
+$('#logout').onclick = () => { lsSet(null); try { localStorage.setItem(LS_KEY + '_out', '1'); } catch (e) {} S.id = null; S.data = null; $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#ident').value = ''; };
 
 async function load(first) {
   busy(true);
@@ -746,10 +747,11 @@ setInterval(() => {
 
 /* ── khởi động ── */
 (async function () {
-  const saved = lsGet();
+  let out = false; try { out = !!localStorage.getItem(LS_KEY + '_out'); } catch (e) {}
+  const saved = (URL_KEY && !out) ? URL_KEY : lsGet();
   if (saved) {
     S.id = saved;
-    try { await load(true); } catch (err) { S.id = null; lsSet(null); $('#loginErr').textContent = err.message; }
+    try { await load(true); lsSet(saved); } catch (err) { S.id = null; lsSet(null); $('#loginErr').textContent = err.message; }
   }
 })();
 </script>

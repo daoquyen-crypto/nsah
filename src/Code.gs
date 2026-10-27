@@ -15,9 +15,10 @@ const H_LOG = ['Thời gian', 'Người cập nhật', 'ID', 'Công việc', 'Th
 
 /* ───────────── Web app ───────────── */
 
-function doGet() {
+function doGet(e) {
   const t = HtmlService.createTemplateFromFile('Index');
-  t.cfg = { id: CONFIG.id, title: CONFIG.appTitle, subtitle: CONFIG.subtitle };
+  const k = String((e && e.parameter && e.parameter.k) || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 20);
+  t.cfg = { id: CONFIG.id, title: CONFIG.appTitle, subtitle: CONFIG.subtitle, k: k };
   return t.evaluate()
     .setTitle(CONFIG.appTitle)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -26,7 +27,7 @@ function doGet() {
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('⚙️ App BTC')
     .addItem('1. Khởi tạo dữ liệu (chạy 1 lần)', 'setup')
-    .addItem('2. Tạo mã cho thành viên chưa có mã', 'generateCodes')
+    .addItem('2. Tạo mã và link đăng nhập riêng cho thành viên', 'generateCodes')
     .addItem('3. Cấp quyền lưu minh chứng (chạy 1 lần)', 'setupEvidence')
     .addToUi();
 }
@@ -79,6 +80,14 @@ function generateCodes() {
     }
   });
   if (changed) rng.setValues(v);
+  // Cột G: link đăng nhập riêng (bấm là vào thẳng app)
+  if (CONFIG.appUrl) {
+    if (!String(sh.getRange(1, 7).getValue())) sh.getRange(1, 7).setValue('Link đăng nhập riêng').setFontWeight('bold').setBackground('#0B1F4B').setFontColor('#ffffff');
+    const links = v.map(r => [String(r[0]).trim() ? CONFIG.appUrl + '?k=' + String(r[0]).trim().toUpperCase() : '']);
+    sh.getRange(2, 7, links.length, 1).setValues(links);
+    sh.setColumnWidth(7, 320);
+  }
+  try { SpreadsheetApp.getUi().alert('Đã cập nhật mã (cột A) và link đăng nhập riêng (cột G) trong sheet "ThanhVien".'); } catch (e) {}
 }
 
 /* ───────────── API cho giao diện ───────────── */

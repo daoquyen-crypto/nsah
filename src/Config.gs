@@ -7,6 +7,7 @@ const CONFIG = {
   id: 'spaceapps-hn-2026',                       // mã ngắn, không dấu, mỗi dự án một mã
   appTitle: 'BTC Space Apps Hà Nội 2026',
   subtitle: 'Ngày thi 14–15/11/2026 · THCS Trưng Vương + Zoom',
+  appUrl: 'https://script.google.com/macros/s/AKfycbyFpJ4CqVHuaOGIIKRSOXpB5N7fiBXAQyBzvfwh7I4MhE4GfCgyPSBE_U2YqJW-eEeC/exec', // link web app, dùng tạo link đăng nhập riêng
   eventDate: '2026-11-14',                       // ngày bắt đầu sự kiện (yyyy-mm-dd), dùng để đếm ngược
   timeZone: 'Asia/Ho_Chi_Minh',
   requireEvidence: true,                         // bắt buộc có minh chứng mới được đánh dấu Hoàn thành (trừ admin)
