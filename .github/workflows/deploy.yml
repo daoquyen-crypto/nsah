@@ -23,8 +23,8 @@ jobs:
       - name: Kiểm tra Secrets
         id: check
         run: |
-          if [ -z "$CLASPRC_JSON" ] || [ -z "$SCRIPT_ID" ]; then
-            echo "::warning::Chưa cài Secrets CLASPRC_JSON và SCRIPT_ID — bỏ qua bước triển khai. Xem README.md."
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "::warning::Chưa cài Secret CLASPRC_JSON — bỏ qua bước triển khai. Xem README.md."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -46,7 +46,10 @@ jobs:
         if: steps.check.outputs.ready == 'true'
         run: |
           printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
-          printf '{"scriptId":"%s","rootDir":"src"}' "$SCRIPT_ID" > .clasp.json
+          # Script ID lấy từ .clasp.json trong kho; có Secret SCRIPT_ID thì ưu tiên Secret
+          if [ -n "$SCRIPT_ID" ]; then
+            printf '{"scriptId":"%s","rootDir":"src"}' "$SCRIPT_ID" > .clasp.json
+          fi
 
       - name: Đẩy code lên Apps Script
         if: steps.check.outputs.ready == 'true'
@@ -60,4 +63,4 @@ jobs:
 
       - name: Dọn thông tin đăng nhập
         if: always()
-        run: rm -f ~/.clasprc.json .clasp.json
+        run: rm -f ~/.clasprc.json

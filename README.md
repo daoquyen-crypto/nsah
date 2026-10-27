@@ -36,7 +36,7 @@ Phân quyền: admin sửa/xoá mọi việc; thành viên sửa việc của ba
    Mac: `~/.clasprc.json`), copy toàn bộ nội dung.
 4. Trên GitHub: Settings → Secrets and variables → Actions → **New repository secret**:
    - `CLASPRC_JSON` = nội dung file ở bước 3
-   - `SCRIPT_ID` = Script ID ở bước 1
+   - Script ID (bước 1) ghi trong file `.clasp.json` ở gốc kho (hoặc tạo Secret `SCRIPT_ID` để ghi đè)
 5. Tab **Actions** → "Đẩy code lên Apps Script" → **Run workflow**. Code sẽ được đẩy lên Apps Script.
 6. Trong Apps Script: chọn hàm `setup` → Chạy (cấp quyền). Sau đó Triển khai → Tùy chọn triển khai mới →
    Ứng dụng web (Thực thi: Tôi; Truy cập: Bất kỳ ai). Copy link app.
