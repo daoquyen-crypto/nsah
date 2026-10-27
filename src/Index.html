@@ -279,6 +279,7 @@ h2{font-size:15px;margin:22px 0 10px}
       </div>
       <div class="actions">
         <button type="button" class="btn danger hidden" id="delBtn">Xoá</button>
+        <button type="button" class="btn ghost hidden" id="remBtn">📧 Nhắc qua email</button>
         <span class="sp"></span>
         <button type="button" class="btn ghost" id="cancelBtn">Đóng</button>
         <button class="btn accent" id="saveBtn">Lưu</button>
@@ -474,6 +475,7 @@ function openTask(id) {
   document.querySelectorAll('#taskForm input,#taskForm select,#taskForm textarea').forEach(el => el.disabled = ro);
   $('#saveBtn').classList.toggle('hidden', ro);
   $('#delBtn').classList.toggle('hidden', !(t && u.admin));
+  $('#remBtn').classList.toggle('hidden', !(t && u.lead && t.owner && !isDone(t)));
   renderEvidence();
   $('#evLinkRow').classList.add('hidden'); $('#evUrl').value = '';
   $('#modal').classList.remove('hidden');
@@ -661,6 +663,16 @@ document.addEventListener('mousemove', e => {
 });
 let rsz; window.addEventListener('resize', () => { clearTimeout(rsz); rsz = setTimeout(() => { if (S.tab === 'dashboard') drawBurn(); }, 200); });
 
+
+$('#remBtn').onclick = async () => {
+  const t = S.editing; if (!t || !confirm('Gửi email nhắc "' + t.title + '" tới: ' + t.owner + '?')) return;
+  busy(true);
+  try {
+    const r = await call('remindTask', S.id, t.id);
+    toast((r.sent.length ? 'Đã gửi email cho ' + r.sent.join(', ') + '. ' : '') + (r.missing.length ? 'Chưa có email: ' + r.missing.join(', ') + ' (thêm ở trang ThanhVien).' : ''), !r.sent.length);
+  } catch (err) { toast(err.message, true); }
+  finally { busy(false); }
+};
 
 /* ── minh chứng ── */
 function renderEvidence() {

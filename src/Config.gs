@@ -10,6 +10,7 @@ const CONFIG = {
   appUrl: 'https://script.google.com/macros/s/AKfycbyFpJ4CqVHuaOGIIKRSOXpB5N7fiBXAQyBzvfwh7I4MhE4GfCgyPSBE_U2YqJW-eEeC/exec', // link web app, dùng tạo link đăng nhập riêng
   eventDate: '2026-11-14',                       // ngày bắt đầu sự kiện (yyyy-mm-dd), dùng để đếm ngược
   timeZone: 'Asia/Ho_Chi_Minh',
+  reminders: { enabled: true, hour: 7, assignNotice: true, daily: true, leadsSummary: true }, // email nhắc việc
   requireEvidence: true,                         // bắt buộc có minh chứng mới được đánh dấu Hoàn thành (trừ admin)
 
   bans: [

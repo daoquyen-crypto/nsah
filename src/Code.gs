@@ -29,6 +29,9 @@ function onOpen() {
     .addItem('1. Khởi tạo dữ liệu (chạy 1 lần)', 'setup')
     .addItem('2. Tạo mã và link đăng nhập riêng cho thành viên', 'generateCodes')
     .addItem('3. Cấp quyền lưu minh chứng (chạy 1 lần)', 'setupEvidence')
+    .addSeparator()
+    .addItem('4. Bật nhắc việc qua email (chạy 1 lần)', 'setupReminders')
+    .addItem('5. Tắt nhắc việc hằng ngày', 'stopReminders')
     .addToUi();
 }
 
@@ -121,6 +124,7 @@ function getData(identifier) {
 function saveTask(identifier, t) {
   const u = auth_(identifier);
   const lock = LockService.getScriptLock();
+  let notice = null;
   lock.waitLock(15000);
   try {
     const sh = ss_().getSheetByName(SH.tasks);
@@ -150,8 +154,10 @@ function saveTask(identifier, t) {
       }
       const changes = diff_(old, rec);
       if (changes.length) {
-        sh.getRange(old.row, 2, 1, 9).setValues([[rec.ban, rec.title, rec.owner, rec.due, rec.status, rec.progress, rec.note, u.name, now, '']]);
+        sh.getRange(old.row, 2, 1, 9).setValues([[rec.ban, rec.title, rec.owner, rec.due, rec.status, rec.progress, rec.note, u.name, now]]);
         log_(u.name, old.id, rec.title, changes.join('; '));
+        const added = splitNames_(rec.owner).filter(n => splitNames_(old.owner).map(x => x.toLowerCase()).indexOf(n.toLowerCase()) < 0);
+        if (added.length && rec.status !== 'Hoàn thành') notice = { task: Object.assign({ id: old.id }, rec), names: added, by: u.name };
       }
     } else {
       if (!u.admin && u.bans.indexOf(rec.ban) < 0) throw new Error('Bạn chỉ thêm việc cho ban mình phụ trách.');
@@ -159,12 +165,14 @@ function saveTask(identifier, t) {
       const id = id_(max + 1);
       const row = sh.getLastRow() + 1;
       sh.getRange(row, 5).setNumberFormat('@');
-      sh.getRange(row, 1, 1, H_TASKS.length).setValues([[id, rec.ban, rec.title, rec.owner, rec.due, rec.status, rec.progress, rec.note, u.name, now]]);
+      sh.getRange(row, 1, 1, H_TASKS.length).setValues([[id, rec.ban, rec.title, rec.owner, rec.due, rec.status, rec.progress, rec.note, u.name, now, '']]);
       log_(u.name, id, rec.title, 'Tạo mới');
+      if (rec.owner) notice = { task: Object.assign({ id: id }, rec), names: splitNames_(rec.owner), by: u.name };
     }
   } finally {
     lock.releaseLock();
   }
+  if (notice) notifyAssigned_(notice.task, notice.names, notice.by);
   return getData(identifier);
 }
 
@@ -234,6 +242,143 @@ function syncSeedTasks_() {
   } finally {
     lock.releaseLock();
   }
+}
+
+/* ───────────── Email nhắc việc ───────────── */
+
+function splitNames_(s) { return String(s || '').split(',').map(x => x.trim()).filter(String); }
+
+function memberMap_() {
+  const m = {};
+  readMembers_().forEach(x => { m[x.name.toLowerCase()] = x; });
+  return m;
+}
+
+function personalLink_(m) { return CONFIG.appUrl ? CONFIG.appUrl + (m && m.code ? '?k=' + m.code : '') : ''; }
+
+function rem_() { return Object.assign({ enabled: true, hour: 7, assignNotice: true, daily: true, leadsSummary: true }, CONFIG.reminders || {}); }
+
+function sendMail_(to, subject, html) {
+  if (!to) return false;
+  try {
+    if (MailApp.getRemainingDailyQuota() < 1) return false;
+    MailApp.sendEmail({ to: to, subject: subject, htmlBody: html, name: CONFIG.appTitle });
+    return true;
+  } catch (e) { console.warn('Gửi email lỗi: ' + e); return false; }
+}
+
+function emailShell_(title, intro, body, link) {
+  return '<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#18213A">' +
+    '<div style="background:#0B1F4B;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0"><div style="font-size:12px;opacity:.8">' + escH_(CONFIG.appTitle) + '</div>' +
+    '<div style="font-size:18px;font-weight:bold;margin-top:4px">' + escH_(title) + '</div></div>' +
+    '<div style="border:1px solid #E3E7F0;border-top:0;padding:18px 20px;border-radius:0 0 10px 10px">' +
+    '<p style="margin:0 0 14px">' + intro + '</p>' + body +
+    (link ? '<p style="margin:20px 0 6px"><a href="' + link + '" style="background:#F26B3A;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:bold;display:inline-block">Mở app tiến độ</a></p>' : '') +
+    '<p style="font-size:11px;color:#6B7590;margin-top:18px">Email tự động từ app theo dõi tiến độ BTC. Nút "Mở app" là link đăng nhập riêng của bạn, vui lòng không chuyển tiếp.</p></div></div>';
+}
+
+function escH_(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function dueTxt_(t) {
+  if (!t.due) return 'Chưa có hạn';
+  const d = daysFromToday_(t.due);
+  if (t.status !== 'Hoàn thành' && d < 0) return '<b style="color:#d03b3b">Quá hạn ' + (-d) + ' ngày</b> (' + dmy_(t.due) + ')';
+  if (d === 0) return '<b style="color:#b77d00">Hạn hôm nay</b>';
+  if (d <= 3) return '<b style="color:#b77d00">Còn ' + d + ' ngày</b> (' + dmy_(t.due) + ')';
+  return 'Hạn ' + dmy_(t.due);
+}
+
+function daysFromToday_(s) {
+  const td = Utilities.formatDate(new Date(), CONFIG.timeZone, 'yyyy-MM-dd');
+  const n = x => { const p = x.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 864e5; };
+  return n(s) - n(td);
+}
+
+function taskTable_(list) {
+  return '<table style="width:100%;border-collapse:collapse;font-size:13px">' + list.map(t =>
+    '<tr><td style="padding:8px 0;border-bottom:1px solid #E3E7F0"><b>' + escH_(t.title) + '</b><br><span style="color:#6B7590;font-size:12px">' +
+    escH_(t.ban) + ' · ' + escH_(t.status) + ' · ' + (t.progress || 0) + '%' + (t.note ? ' · ' + escH_(t.note) : '') + '</span></td>' +
+    '<td style="padding:8px 0 8px 10px;border-bottom:1px solid #E3E7F0;text-align:right;white-space:nowrap;font-size:12px">' + dueTxt_(t) + '</td></tr>').join('') + '</table>';
+}
+
+// 1) Khi được giao việc
+function notifyAssigned_(task, names, by) {
+  const r = rem_(); if (!r.enabled || !r.assignNotice) return;
+  const mm = memberMap_();
+  names.forEach(n => {
+    const m = mm[n.toLowerCase()];
+    if (!m || !m.email || m.name === by) return;
+    sendMail_(m.email, '[BTC] Bạn được giao việc: ' + task.title,
+      emailShell_('Bạn có việc mới', 'Chào ' + escH_(m.name) + ', <b>' + escH_(by) + '</b> vừa giao cho bạn công việc sau:', taskTable_([task]), personalLink_(m)));
+  });
+}
+
+// 2) Nút "Nhắc qua email" trong app
+function remindTask(identifier, taskId) {
+  const u = auth_(identifier);
+  if (!u.lead) throw new Error('Chỉ Trưởng BTC và thành viên chủ chốt được gửi nhắc việc.');
+  const t = readTasks_().find(x => x.id === taskId);
+  if (!t) throw new Error('Không tìm thấy công việc.');
+  const mm = memberMap_(), sent = [], missing = [];
+  splitNames_(t.owner).forEach(n => {
+    const m = mm[n.toLowerCase()];
+    if (!m || !m.email) { missing.push(n); return; }
+    const ok = sendMail_(m.email, '[BTC] Nhắc việc: ' + t.title,
+      emailShell_('Nhắc việc', 'Chào ' + escH_(m.name) + ', <b>' + escH_(u.name) + '</b> nhắc bạn cập nhật tiến độ công việc sau:', taskTable_([t]), personalLink_(m)));
+    (ok ? sent : missing).push(n);
+  });
+  if (sent.length) log_(u.name, t.id, t.title, 'Gửi email nhắc: ' + sent.join(', '));
+  return { sent: sent, missing: missing };
+}
+
+// 3) Nhắc hằng ngày (chạy tự động mỗi sáng)
+function dailyReminder() {
+  const r = rem_(); if (!r.enabled || !r.daily) return;
+  const tasks = readTasks_().filter(t => t.status !== 'Hoàn thành');
+  const members = readMembers_();
+  const late = tasks.filter(t => t.due && daysFromToday_(t.due) < 0);
+  const soon = tasks.filter(t => t.due && daysFromToday_(t.due) >= 0 && daysFromToday_(t.due) <= 3);
+  const blocked = tasks.filter(t => t.status === 'Bị vướng');
+  const byDue = (a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1;
+  const evLeft = daysFromToday_(CONFIG.eventDate);
+  let count = 0;
+  members.forEach(m => {
+    if (!m.email) return;
+    const mine = tasks.filter(t => splitNames_(t.owner).some(n => n.toLowerCase() === m.name.toLowerCase()))
+      .filter(t => (t.due && daysFromToday_(t.due) <= 3) || t.status === 'Bị vướng').sort(byDue);
+    let body = '';
+    if (mine.length) body += '<h3 style="font-size:15px;margin:6px 0">Việc của bạn cần chú ý (' + mine.length + ')</h3>' + taskTable_(mine);
+    if (m.lead && r.leadsSummary) {
+      const all = readTasks_(), done = all.filter(t => t.status === 'Hoàn thành').length;
+      const pct = all.length ? Math.round(all.reduce((a, t) => a + t.progress, 0) / all.length) : 0;
+      const unassigned = tasks.filter(t => !t.owner).length;
+      body += '<h3 style="font-size:15px;margin:22px 0 6px">Tóm tắt toàn BTC</h3>' +
+        '<p style="margin:0 0 8px;font-size:13px">Tiến độ chung <b>' + pct + '%</b> · ' + done + '/' + all.length + ' việc xong · ' +
+        '<b style="color:#d03b3b">' + late.length + ' quá hạn</b> · ' + blocked.length + ' bị vướng · ' + soon.length + ' đến hạn ≤ 3 ngày · ' + unassigned + ' chưa giao người</p>';
+      const hot = late.concat(blocked.filter(t => late.indexOf(t) < 0)).sort(byDue).slice(0, 10);
+      if (hot.length) body += '<div style="font-size:13px;font-weight:bold;margin:10px 0 0">Điểm nóng</div>' + taskTable_(hot.map(t => Object.assign({}, t, { title: t.title + (t.owner ? ' — ' + t.owner : ' — chưa giao người') })));
+    }
+    if (!body) return;
+    const intro = 'Chào ' + escH_(m.name) + ', ' + (evLeft > 0 ? 'còn <b>' + evLeft + ' ngày</b> đến ngày thi. ' : '') + 'Đây là tình hình công việc sáng nay:';
+    if (sendMail_(m.email, '[BTC] Nhắc việc ngày ' + Utilities.formatDate(new Date(), CONFIG.timeZone, 'dd/MM') + (mine.length ? ' — ' + mine.length + ' việc của bạn' : ''),
+      emailShell_('Nhắc việc hằng ngày', intro, body, personalLink_(m)))) count++;
+  });
+  if (count) log_('Hệ thống', '', '', 'Gửi email nhắc việc hằng ngày cho ' + count + ' người');
+}
+
+function setupReminders() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'dailyReminder').forEach(t => ScriptApp.deleteTrigger(t));
+  const h = rem_().hour;
+  ScriptApp.newTrigger('dailyReminder').timeBased().everyDays(1).atHour(h).inTimezone(CONFIG.timeZone).create();
+  const me = Session.getEffectiveUser().getEmail();
+  sendMail_(me, '[BTC] Đã bật nhắc việc qua email', emailShell_('Đã bật nhắc việc', 'Mỗi sáng khoảng ' + h + ':00, app sẽ gửi email nhắc việc cho thành viên có email trong sheet "ThanhVien". ' +
+    'Người được giao việc mới cũng nhận email ngay. Còn lại hôm nay có thể gửi khoảng ' + MailApp.getRemainingDailyQuota() + ' email.', '', CONFIG.appUrl));
+  try { SpreadsheetApp.getUi().alert('Đã bật nhắc việc qua email (mỗi sáng khoảng ' + h + ':00). Một email xác nhận đã gửi tới ' + me + '.'); } catch (e) {}
+}
+
+function stopReminders() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'dailyReminder').forEach(t => ScriptApp.deleteTrigger(t));
+  try { SpreadsheetApp.getUi().alert('Đã tắt email nhắc việc hằng ngày. (Email khi được giao việc vẫn gửi; tắt hẳn bằng reminders.enabled trong Config.)'); } catch (e) {}
 }
 
 /* ───────────── Minh chứng ───────────── */
