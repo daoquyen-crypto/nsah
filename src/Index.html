@@ -115,11 +115,54 @@ h2{font-size:15px;margin:22px 0 10px}
 @keyframes ld{from{background-position:200% 0}to{background-position:-200% 0}}
 .sync{font-size:12px;color:var(--muted);text-align:right;margin-top:24px}
 @media(max-width:560px){.grid2{grid-template-columns:1fr}.task{grid-template-columns:auto 1fr}.task .right{grid-column:2;text-align:left;display:flex;gap:10px;align-items:center}.task .right .bar{margin:0}}
+
+/* ── dashboard ── */
+.dash{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0}
+.card h4{margin:0 0 2px;font-size:14px}
+.card .sub{color:var(--muted);font-size:12px;margin-bottom:12px}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.hero{background:linear-gradient(135deg,#0B1F4B,#1d3f8f);color:#fff;border:0}
+.hero .lbl{opacity:.8;font-size:12px}
+.hero .big{font-size:44px;font-weight:700;line-height:1.1;margin:6px 0 2px}
+.hero .bar{background:rgba(255,255,255,.18);margin-top:10px}.hero .bar i{background:#5fd18b}
+.kpi .lbl{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
+.kpi .big{font-size:32px;font-weight:700;margin-top:6px;line-height:1.1}
+.kpi .foot{font-size:12px;color:var(--muted);margin-top:4px}
+.kpi.crit .big{color:#d03b3b}.kpi.warn .big{color:#b77d00}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block}
+.sw.line{height:3px;width:16px;border-radius:2px}
+.sw.dash{height:0;width:16px;border-top:2px dashed #8a8f9c;border-radius:0}
+.hbar{display:grid;grid-template-columns:minmax(110px,180px) 1fr 54px;gap:10px;align-items:center;font-size:13px;padding:5px 0}
+.hbar .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbar .tr{height:10px;background:#EEF1F6;border-radius:4px;display:flex;gap:2px;overflow:hidden}
+.hbar .tr i{display:block;height:100%;border-radius:4px}
+.hbar .v{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.hbar .flag{color:#d03b3b;font-size:11px;font-weight:600;margin-left:6px}
+.hbar[data-tip]:hover .tr{outline:2px solid #c9d4ec;outline-offset:2px}
+.stack{display:flex;gap:2px;height:16px;border-radius:5px;overflow:hidden}
+.stack i{display:block;height:100%}
+.svgwrap svg{display:block;width:100%;height:auto}
+.svgwrap .col:hover{fill:rgba(42,120,214,.08)}
+.mini{list-style:none;margin:0;padding:0}
+.mini li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+.mini li:last-child{border-bottom:0}
+.mini .d{min-width:52px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}
+.mini .t{flex:1;min-width:0}
+.mini .t small{display:block;color:var(--muted);font-size:12px}
+.tag{font-size:11px;font-weight:600;border-radius:99px;padding:2px 8px;white-space:nowrap;align-self:flex-start}
+.tag.crit{background:#FDE5E5;color:#b42d2d}.tag.blk{background:#FFF1D6;color:#8a5a00}
+#tip{position:fixed;pointer-events:none;background:#18213A;color:#fff;font-size:12px;padding:8px 10px;border-radius:8px;z-index:50;max-width:260px;line-height:1.45;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+@media(max-width:900px){.c3{grid-column:span 6}.c4,.c5,.c6,.c7,.c8{grid-column:span 12}}
+@media(max-width:560px){.c3{grid-column:span 6}.hero .big{font-size:36px}.kpi .big{font-size:26px}.hbar{grid-template-columns:96px 1fr 44px}}
 </style>
 </head>
 <body>
 
 <div id="loading" class="loading hidden"></div>
+<div id="tip" class="hidden"></div>
 
 <!-- Đăng nhập -->
 <section id="login">
@@ -145,11 +188,13 @@ h2{font-size:15px;margin:22px 0 10px}
     <div class="user"><span id="uname"></span><button id="logout">Đăng xuất</button></div>
   </div></header>
   <nav><div class="nwrap">
+    <button data-tab="dashboard" class="hidden" id="tabDash">Dashboard</button>
     <button data-tab="overview" class="on">Tổng quan</button>
     <button data-tab="tasks">Công việc</button>
     <button data-tab="log">Nhật ký cập nhật</button>
   </div></nav>
   <main>
+    <div id="view-dashboard" class="hidden"></div>
     <div id="view-overview"></div>
     <div id="view-tasks" class="hidden">
       <div class="filters">
@@ -262,7 +307,8 @@ async function load(first) {
 function initApp() {
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
   const d = S.data;
-  $('#uname').textContent = d.user.name + (d.user.admin ? ' · Trưởng BTC' : '');
+  $('#uname').textContent = d.user.name + (d.user.admin ? ' · Trưởng BTC' : d.user.lead ? ' · Chủ chốt' : '');
+  if (d.user.lead) { $('#tabDash').classList.remove('hidden'); S.tab = 'dashboard'; setTimeout(() => setTab('dashboard'), 0); }
   $('#fban').innerHTML = '<option value="">Tất cả các ban</option>' + d.bans.map(b => '<option>' + esc(b) + '</option>').join('');
   $('#fstatus').innerHTML = '<option value="">Mọi trạng thái</option><option value="__late">⚠ Quá hạn</option><option value="__soon">⏰ Đến hạn ≤ 3 ngày</option>' + d.statuses.map(s => '<option>' + esc(s) + '</option>').join('');
   $('#t_status').innerHTML = d.statuses.map(s => '<option>' + esc(s) + '</option>').join('');
@@ -276,8 +322,8 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => setTab(b.
 function setTab(tab) {
   S.tab = tab;
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
-  ['overview', 'tasks', 'log'].forEach(v => $('#view-' + v).classList.toggle('hidden', v !== tab));
-  $('#addBtn').classList.toggle('hidden', tab === 'log');
+  ['dashboard', 'overview', 'tasks', 'log'].forEach(v => $('#view-' + v).classList.toggle('hidden', v !== tab));
+  $('#addBtn').classList.toggle('hidden', tab === 'log' || tab === 'dashboard');
   if (tab === 'log') loadLog(); else render();
 }
 ['#fq', '#fban', '#fstatus', '#fmine', '#fhide'].forEach(s => $(s).addEventListener('input', renderTasks));
@@ -285,7 +331,7 @@ function setTab(tab) {
 function render() {
   if (!S.data) return;
   $('#sync').textContent = 'Đồng bộ lúc ' + S.data.serverTime + ' · tự làm mới mỗi 2 phút';
-  if (S.tab === 'overview') renderOverview(); else if (S.tab === 'tasks') renderTasks();
+  if (S.tab === 'dashboard') renderDashboard(); else if (S.tab === 'overview') renderOverview(); else if (S.tab === 'tasks') renderTasks();
 }
 
 function avg(ts) { return ts.length ? Math.round(ts.reduce((a, t) => a + t.progress, 0) / ts.length) : 0; }
@@ -429,6 +475,149 @@ async function loadLog() {
     $('#logList').innerHTML = L.length ? L.map(l => '<div><b>' + esc(l.who) + '</b> · ' + esc(l.id) + ' ' + esc(l.title) + '<br>' + esc(l.change) + '<br><small>' + esc(l.time) + '</small></div>').join('') : '<div>Chưa có cập nhật nào.</div>';
   } catch (err) { $('#logList').innerHTML = '<div>' + esc(err.message) + '</div>'; }
 }
+
+
+/* ── dashboard ── */
+const C = { blue: '#2a78d6', plan: '#8a8f9c', good: '#0ca30c', crit: '#d03b3b', warn: '#eda100', idle: '#C3C8D4', grid: '#E9EDF5', muted: '#6B7590' };
+const STC = { 'Chưa bắt đầu': C.idle, 'Đang làm': C.blue, 'Bị vướng': C.crit, 'Hoàn thành': C.good };
+function addDays(s, n) { const d = new Date(dnum(s) * 864e5 + n * 864e5); return d.toISOString().slice(0, 10); }
+function ownersOf(t) { return t.owner ? t.owner.split(',').map(x => x.trim()).filter(Boolean) : []; }
+
+function renderDashboard() {
+  const D = S.data, T = D.tasks, td = today();
+  if (!D.user.lead) { $('#view-dashboard').innerHTML = '<div class="empty">Dashboard chỉ dành cho thành viên chủ chốt.</div>'; return; }
+  const done = T.filter(isDone), late = T.filter(isLate), soon = T.filter(isSoon), blocked = T.filter(t => t.status === 'Bị vướng');
+  const unassigned = T.filter(t => !isDone(t) && !t.owner);
+  const pct = avg(T), left = daysTo(D.eventDate);
+  const doneWeek = done.filter(t => t.doneAt && daysTo(t.doneAt) > -7).length;
+  let h = '<div class="dash">';
+
+  // hero + KPI
+  h += '<div class="card hero c3"><div class="lbl">Tiến độ chung toàn BTC</div><div class="big">' + pct + '%</div>' +
+       '<div class="lbl">' + (left > 0 ? 'Còn <b>' + left + ' ngày</b> đến ngày thi' : left === 0 ? '<b>Hôm nay là ngày thi</b>' : 'Đã qua ngày thi') + '</div>' +
+       '<div class="bar big"><i style="width:' + pct + '%"></i></div></div>';
+  h += kpi('', '✓', 'Đã hoàn thành', done.length + '<span style="font-size:16px;color:var(--muted);font-weight:500"> / ' + T.length + '</span>', '+' + doneWeek + ' việc trong 7 ngày qua', 'Hoàn thành');
+  h += kpi(late.length ? 'crit' : '', '⚠', 'Quá hạn', late.length, unassigned.length + ' việc chưa giao người', '__late');
+  h += kpi(soon.length ? 'warn' : '', '⏰', 'Đến hạn ≤ 3 ngày', soon.length, blocked.length + ' việc đang bị vướng', '__soon');
+
+  // plan vs actual
+  h += '<div class="card c8"><h4>Kế hoạch so với thực tế</h4><div class="sub">Số việc cộng dồn: đến hạn theo kế hoạch và đã hoàn thành</div>' +
+       '<div class="svgwrap" id="burn"></div><div class="legend"><span><i class="sw line" style="background:' + C.blue + '"></i>Thực tế (đã hoàn thành)</span>' +
+       '<span><i class="sw dash"></i>Kế hoạch (theo hạn chót)</span><span><i class="sw" style="background:rgba(242,107,58,.18)"></i>Ngày thi</span></div></div>';
+
+  // status
+  const total = T.length || 1;
+  h += '<div class="card c4"><h4>Trạng thái công việc</h4><div class="sub">' + T.length + ' việc</div><div class="stack">' +
+       D.statuses.map(st => { const n = T.filter(t => t.status === st).length; return n ? '<i style="flex:' + n + ';background:' + STC[st] + '" data-tip="<b>' + st + '</b><br>' + n + ' việc · ' + Math.round(n * 100 / total) + '%"></i>' : ''; }).join('') +
+       '</div><div style="margin-top:14px">' +
+       D.statuses.map(st => { const n = T.filter(t => t.status === st).length;
+         return '<div class="hbar" style="grid-template-columns:1fr auto"><span><i class="sw" style="background:' + STC[st] + ';margin-right:8px"></i>' + st + '</span><span class="v">' + n + '</span></div>'; }).join('') +
+       '</div></div>';
+
+  // by ban
+  h += '<div class="card c7"><h4>Tiến độ theo ban</h4><div class="sub">% tiến độ trung bình các việc của ban · bấm để xem chi tiết</div>';
+  D.bans.forEach(b => {
+    const ts = T.filter(t => t.ban === b); if (!ts.length) return;
+    const p = avg(ts), l = ts.filter(isLate).length, bl = ts.filter(t => t.status === 'Bị vướng').length;
+    h += '<div class="hbar" style="cursor:pointer" data-ban="' + esc(b) + '" data-tip="<b>' + esc(b) + '</b><br>' + ts.filter(isDone).length + '/' + ts.length + ' việc xong · ' + p + '%' + (l ? '<br>⚠ ' + l + ' quá hạn' : '') + (bl ? '<br>⛔ ' + bl + ' bị vướng' : '') + '">' +
+         '<span class="nm">' + esc(b) + '</span><span class="tr"><i style="width:' + p + '%;background:' + C.blue + '"></i></span>' +
+         '<span class="v">' + p + '%' + (l ? '<span class="flag">⚠' + l + '</span>' : '') + '</span></div>';
+  });
+  h += '</div>';
+
+  // workload
+  const load = {};
+  T.filter(t => !isDone(t)).forEach(t => ownersOf(t).forEach(o => { load[o] = load[o] || { open: 0, late: 0 }; load[o].open++; if (isLate(t)) load[o].late++; }));
+  const people = Object.keys(load).sort((a, b) => load[b].open - load[a].open).slice(0, 8);
+  const maxL = Math.max(1, ...people.map(p => load[p].open));
+  h += '<div class="card c5"><h4>Khối lượng việc theo người</h4><div class="sub">Việc chưa xong đang phụ trách (8 người nhiều nhất)</div>' +
+       (people.length ? people.map(p => { const o = load[p];
+         return '<div class="hbar" data-tip="<b>' + esc(p) + '</b><br>' + o.open + ' việc chưa xong' + (o.late ? '<br>⚠ ' + o.late + ' quá hạn' : '') + '"><span class="nm">' + esc(p) + '</span>' +
+           '<span class="tr" style="background:transparent">' + (o.late ? '<i style="width:' + (o.late * 100 / maxL) + '%;background:' + C.crit + '"></i>' : '') +
+           (o.open - o.late ? '<i style="width:' + ((o.open - o.late) * 100 / maxL) + '%;background:' + C.blue + '"></i>' : '') + '</span><span class="v">' + o.open + '</span></div>'; }).join('') +
+         '<div class="legend"><span><i class="sw" style="background:' + C.blue + '"></i>Đang mở</span><span><i class="sw" style="background:' + C.crit + '"></i>Quá hạn</span></div>'
+       : '<div class="empty" style="padding:20px">Chưa có việc nào được giao người.</div>') + '</div>';
+
+  // hot list
+  const hot = late.concat(blocked.filter(t => !isLate(t))).sort(byDue).slice(0, 8);
+  h += '<div class="card c6"><h4>Điểm nóng</h4><div class="sub">Việc quá hạn hoặc đang bị vướng</div>' +
+       (hot.length ? '<ul class="mini">' + hot.map(t => '<li data-id="' + esc(t.id) + '"><span class="d">' + (t.due ? dmy(t.due) : '—') + '</span><span class="t">' + esc(t.title) +
+         '<small>' + esc(t.ban) + ' · ' + (t.owner ? esc(t.owner) : 'Chưa giao người') + (t.note ? ' · ' + esc(t.note) : '') + '</small></span>' +
+         (isLate(t) ? '<span class="tag crit">⚠ Quá hạn ' + (-daysTo(t.due)) + 'n</span>' : '<span class="tag blk">⛔ Bị vướng</span>') + '</li>').join('') + '</ul>'
+       : '<div class="empty" style="padding:20px">Không có điểm nóng. 🎉</div>') + '</div>';
+
+  // upcoming
+  const up = T.filter(t => !isDone(t) && t.due && daysTo(t.due) >= 0 && daysTo(t.due) <= 7).sort(byDue).slice(0, 10);
+  h += '<div class="card c6"><h4>7 ngày tới</h4><div class="sub">Việc chưa xong có hạn chót từ hôm nay đến ' + dmy(addDays(td, 7)) + '</div>' +
+       (up.length ? '<ul class="mini">' + up.map(t => '<li data-id="' + esc(t.id) + '"><span class="d">' + dmy(t.due) + '</span><span class="t">' + esc(t.title) +
+         '<small>' + esc(t.ban) + ' · ' + (t.owner ? esc(t.owner) : 'Chưa giao người') + '</small></span><span class="tag" style="background:#E9EDF5">' + t.progress + '%</span></li>').join('') + '</ul>'
+       : '<div class="empty" style="padding:20px">Không có việc đến hạn trong 7 ngày tới.</div>') + '</div>';
+
+  h += '</div>';
+  const v = $('#view-dashboard'); v.innerHTML = h;
+  drawBurn();
+  v.querySelectorAll('[data-ban]').forEach(el => el.onclick = () => { resetFilters(); $('#fban').value = el.dataset.ban; setTab('tasks'); });
+  v.querySelectorAll('.kpi[data-f]').forEach(el => el.onclick = () => { resetFilters(); $('#fstatus').value = el.dataset.f; setTab('tasks'); });
+  v.querySelectorAll('.mini li').forEach(el => el.onclick = () => openTask(el.dataset.id));
+}
+function kpi(cls, icon, label, val, foot, f) {
+  return '<div class="card kpi c3 ' + cls + '" data-f="' + f + '" style="cursor:pointer"><div class="lbl"><span aria-hidden="true">' + icon + '</span>' + label + '</div><div class="big">' + val + '</div><div class="foot">' + foot + '</div></div>';
+}
+
+function drawBurn() {
+  const el = $('#burn'); if (!el) return;
+  const T = S.data.tasks, td = today(), ev = S.data.eventDate;
+  const dues = T.filter(t => t.due).map(t => t.due).sort(), dn = T.filter(t => t.doneAt).map(t => t.doneAt).sort();
+  if (!dues.length) { el.innerHTML = '<div class="empty">Chưa có việc nào có hạn chót.</div>'; return; }
+  let start = [dues[0], dn[0] || td, td].sort()[0], end = [dues[dues.length - 1], addDays(ev, 1)].sort().pop();
+  const N = dnum(end) - dnum(start) + 1, days = [];
+  for (let i = 0; i < N; i++) days.push(addDays(start, i));
+  const plan = days.map(d => T.filter(t => t.due && t.due <= d).length);
+  const act = days.map(d => d <= td ? T.filter(t => t.doneAt && t.doneAt <= d).length : null);
+  const W = Math.max(320, el.clientWidth || 640), H = 240, L = 34, R = 14, Tp = 12, B = 28;
+  const yStep = Math.max(1, Math.ceil(T.length / 4 / 5) * 5), yMax = yStep * 4;
+  const x = i => L + (W - L - R) * (N === 1 ? 0.5 : i / (N - 1)), y = v => Tp + (H - Tp - B) * (1 - v / yMax);
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Biểu đồ kế hoạch so với thực tế">';
+  // event band
+  const ei = days.indexOf(ev);
+  if (ei >= 0) { const x0 = x(ei) - 4, x1 = x(Math.min(ei + 1, N - 1)) + 4; s += '<rect x="' + x0 + '" y="' + Tp + '" width="' + (x1 - x0) + '" height="' + (H - Tp - B) + '" fill="rgba(242,107,58,.12)" rx="4"/>' +
+    '<text x="' + ((x0 + x1) / 2) + '" y="' + (Tp + 12) + '" font-size="10" text-anchor="middle" fill="#c4512a">Ngày thi</text>'; }
+  // grid
+  for (let k = 0; k <= 4; k++) { const v = yMax * k / 4, yy = y(v);
+    s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '" stroke="' + C.grid + '"/>' +
+         '<text x="' + (L - 6) + '" y="' + (yy + 4) + '" font-size="10" text-anchor="end" fill="' + C.muted + '">' + Math.round(v) + '</text>'; }
+  // x labels (~7)
+  const step = Math.max(1, Math.round(N / 7));
+  days.forEach((d, i) => { if (i % step === 0 || i === N - 1) s += '<text x="' + x(i) + '" y="' + (H - 8) + '" font-size="10" text-anchor="middle" fill="' + C.muted + '">' + dmy(d) + '</text>'; });
+  // today line
+  const ti = days.indexOf(td);
+  if (ti >= 0) s += '<line x1="' + x(ti) + '" x2="' + x(ti) + '" y1="' + Tp + '" y2="' + (H - B) + '" stroke="#18213A" stroke-dasharray="2 3" opacity=".5"/>' +
+    '<text x="' + (x(ti) + 4) + '" y="' + (Tp + 10) + '" font-size="10" fill="#18213A" opacity=".7">Hôm nay</text>';
+  // plan (step line)
+  let pd = ''; plan.forEach((v, i) => { pd += (i ? ' H' + x(i) + ' V' + y(v) : 'M' + x(0) + ' ' + y(v)); });
+  s += '<path d="' + pd + '" fill="none" stroke="' + C.plan + '" stroke-width="2" stroke-dasharray="5 4"/>';
+  // actual
+  let ad = ''; act.forEach((v, i) => { if (v == null) return; ad += (ad ? ' H' + x(i) + ' V' + y(v) : 'M' + x(i) + ' ' + y(v)); });
+  s += '<path d="' + ad + '" fill="none" stroke="' + C.blue + '" stroke-width="2.5" stroke-linejoin="round"/>';
+  const li = act.reduce((a, v, i) => v == null ? a : i, 0);
+  s += '<circle cx="' + x(li) + '" cy="' + y(act[li]) + '" r="5" fill="' + C.blue + '" stroke="#fff" stroke-width="2"/>' +
+       '<text x="' + Math.min(x(li) + 8, W - R - 60) + '" y="' + (y(act[li]) - 8) + '" font-size="11" font-weight="600" fill="#18213A">' + act[li] + ' xong</text>';
+  // hover columns
+  const cw = (W - L - R) / Math.max(1, N - 1);
+  days.forEach((d, i) => { s += '<rect class="col" x="' + (x(i) - cw / 2) + '" y="' + Tp + '" width="' + cw + '" height="' + (H - Tp - B) + '" fill="transparent" data-tip="<b>' + dmy(d) + '</b><br>Kế hoạch: ' + plan[i] + ' việc đến hạn' + (act[i] != null ? '<br>Thực tế: ' + act[i] + ' việc xong' : '') + '"/>'; });
+  el.innerHTML = s + '</svg>';
+}
+
+// tooltip
+document.addEventListener('mousemove', e => {
+  const t = e.target.closest && e.target.closest('#view-dashboard [data-tip]'), tip = $('#tip');
+  if (!t) { tip.classList.add('hidden'); return; }
+  tip.innerHTML = t.getAttribute('data-tip'); tip.classList.remove('hidden');
+  const r = tip.getBoundingClientRect();
+  tip.style.left = Math.min(e.clientX + 14, innerWidth - r.width - 8) + 'px';
+  tip.style.top = Math.min(e.clientY + 14, innerHeight - r.height - 8) + 'px';
+});
+let rsz; window.addEventListener('resize', () => { clearTimeout(rsz); rsz = setTimeout(() => { if (S.tab === 'dashboard') drawBurn(); }, 200); });
 
 /* ── tự làm mới ── */
 setInterval(() => {

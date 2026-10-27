@@ -9,7 +9,7 @@ const SH = { members: 'ThanhVien', tasks: 'CongViec', log: 'NhatKy' };
 
 const STATUSES = ['Chưa bắt đầu', 'Đang làm', 'Bị vướng', 'Hoàn thành'];
 
-const H_MEMBERS = ['Mã truy cập', 'Họ tên', 'Ban (nhiều ban cách nhau dấu phẩy)', 'Vai trò (admin / thành viên)', 'Điện thoại', 'Email'];
+const H_MEMBERS = ['Mã truy cập', 'Họ tên', 'Ban (nhiều ban cách nhau dấu phẩy)', 'Vai trò (admin / chủ chốt / thành viên)', 'Điện thoại', 'Email'];
 const H_TASKS = ['ID', 'Ban', 'Công việc', 'Phụ trách', 'Hạn chót (yyyy-mm-dd)', 'Trạng thái', 'Tiến độ (%)', 'Ghi chú', 'Cập nhật bởi', 'Cập nhật lúc'];
 const H_LOG = ['Thời gian', 'Người cập nhật', 'ID', 'Công việc', 'Thay đổi'];
 
@@ -89,9 +89,13 @@ function login(identifier) {
 function getData(identifier) {
   const u = auth_(identifier);
   fixIds_();
-  const tasks = readTasks_().map(t => Object.assign(t, { canEdit: canEdit_(u, t) }));
+  const done = doneDates_();
+  const tasks = readTasks_().map(t => Object.assign(t, {
+    canEdit: canEdit_(u, t),
+    doneAt: t.status === 'Hoàn thành' ? (done[t.id] || logDate_(t.updatedAt)) : ''
+  }));
   return {
-    user: { name: u.name, bans: u.bans, admin: u.admin },
+    user: { name: u.name, bans: u.bans, admin: u.admin, lead: u.lead },
     tasks: tasks,
     members: readMembers_().map(m => ({ name: m.name, bans: m.bans })),
     bans: CONFIG.bans,
@@ -207,6 +211,7 @@ function readMembers_() {
     name: String(r[1]).trim(),
     bans: String(r[2]).split(',').map(s => s.trim()).filter(String),
     admin: /admin/i.test(String(r[3])),
+    lead: /admin|chủ chốt|chu chot|trưởng ban|dashboard/i.test(String(r[3])),
     phone: phone_(r[4]),
     email: String(r[5]).trim().toLowerCase()
   }));
@@ -270,6 +275,23 @@ function fixIds_() {
   const sh = ss_().getSheetByName(SH.tasks);
   let max = tasks.reduce((a, x) => Math.max(a, parseInt(String(x.id).replace(/\D/g, ''), 10) || 0), 0);
   missing.forEach(t => sh.getRange(t.row, 1).setValue(id_(++max)));
+}
+
+// Ngày hoàn thành của từng việc, lấy từ nhật ký (lần gần nhất chuyển sang "Hoàn thành")
+function doneDates_() {
+  const map = {};
+  const sh = ss_().getSheetByName(SH.log);
+  if (!sh || sh.getLastRow() < 2) return map;
+  sh.getRange(2, 1, sh.getLastRow() - 1, 5).getValues().forEach(r => {
+    if (/→ Hoàn thành/.test(String(r[4]))) map[String(r[2])] = logDate_(r[0]);
+  });
+  return map;
+}
+
+function logDate_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, CONFIG.timeZone, 'yyyy-MM-dd');
+  const m = String(v || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m ? m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2) : '';
 }
 
 function dmy_(s) { return s ? s.split('-').reverse().join('/') : '(trống)'; }
