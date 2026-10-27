@@ -7,5 +7,6 @@
 - `Index.html` là HtmlService template (`<?= ?>`); tránh viết chuỗi `<?` trong CSS/JS.
 - Muốn THÊM công việc mới cho app đang chạy: thêm dòng vào `seedTasks` trong `Config.gs` (ban phải có trong `bans`) rồi đẩy lên — `syncSeedTasks_()` tự thêm vào Sheet đúng một lần ở lần mở app kế tiếp (người tạo ghi "Kế hoạch"). Sửa/xoá dòng seed KHÔNG sửa/xoá việc đã có trong Sheet; sửa việc đang chạy thì làm trên app hoặc Sheet.
 - Thay đổi cấu trúc cột Sheet phải tương thích ngược với dữ liệu đang có.
-- Trước khi commit: `cat src/Config.gs src/Code.gs > /tmp/a.js && node --check /tmp/a.js`, và kiểm tra cú pháp phần `<script>` của Index.html.
+- Trước khi commit: `cat src/Config.gs src/Code.gs > /tmp/a.js && node --check /tmp/a.js`, kiểm tra cú pháp phần `<script>` của Index.html, và chạy `node tests/simulate.js` (giả lập Sheet; bắt lỗi lệch số cột khi ghi). Đẩy xong kiểm tra run GitHub Actions có "Deployed … @N".
+- Thêm quyền Google mới (Drive, Mail, Trigger…) thì người dùng phải chạy một mục menu trong Sheet để cấp quyền ngay sau khi triển khai — nhắc họ.
 - Không dùng tên thương hiệu VEX trong nội dung hay thiết kế.
